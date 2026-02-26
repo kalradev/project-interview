@@ -1,0 +1,146 @@
+/* Interview page */
+.interview-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+
+.interview-header {
+  margin-bottom: 2rem;
+}
+
+.interview-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.interview-main {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid #334155;
+}
+
+.interview-placeholder {
+  color: #94a3b8;
+  text-align: center;
+  padding: 2rem;
+}
+
+.interview-placeholder p {
+  margin: 0 0 0.75rem 0;
+}
+
+.interview-placeholder p:last-child {
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+
+/* Warning modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  max-width: 400px;
+  width: 100%;
+  border: 1px solid #334155;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modal-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #fbbf24;
+}
+
+.modal-text {
+  margin: 0 0 1.5rem 0;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+.modal-text strong {
+  color: #f87171;
+}
+
+.btn {
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+/* Disqualified screen */
+.disqualified-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: #0f172a;
+}
+
+.disqualified-card {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 2.5rem;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid #334155;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.disqualified-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.disqualified-card h1 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  color: #f87171;
+}
+
+.disqualified-card p {
+  margin: 0 0 0.75rem 0;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+.disqualified-note {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  margin-bottom: 0;
+}
