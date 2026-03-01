@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 
-function useLeaveDetection() {
+/**
+ * @param {{ onLeave?: (count: number, isDisqualified: boolean) => void }} [options]
+ */
+function useLeaveDetection(options) {
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
   const [showWarning, setShowWarning] = useState(false)
   const [isDisqualified, setIsDisqualified] = useState(false)
+  const onLeave = options?.onLeave
 
   const dismissWarning = useCallback(() => setShowWarning(false), [])
 
@@ -12,9 +16,10 @@ function useLeaveDetection() {
       const next = prev + 1
       if (next === 1) setShowWarning(true)
       if (next >= 2) setIsDisqualified(true)
+      if (onLeave) queueMicrotask(() => onLeave(next, next >= 2))
       return next
     })
-  }, [])
+  }, [onLeave])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -43,7 +48,8 @@ function useLeaveDetection() {
 /**
  * Monitors leaving the interview (tab switch in browser, or window focus loss in Electron).
  * First time = warning, second time = disqualify.
+ * @param {{ onLeave?: (count: number, isDisqualified: boolean) => void }} [options]
  */
-export function useTabSwitchMonitor() {
-  return useLeaveDetection()
+export function useTabSwitchMonitor(options) {
+  return useLeaveDetection(options)
 }

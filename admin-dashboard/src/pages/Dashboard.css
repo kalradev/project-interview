@@ -1,0 +1,316 @@
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+.btn-outline {
+  background: transparent;
+  color: #555;
+  border: 1px solid #ccc;
+}
+.btn-outline:hover {
+  background: #f5f5f5;
+}
+.btn-sm { padding: 0.35rem 0.6rem; font-size: 0.8rem; }
+.btn-sm.green { background: #16a34a; color: #fff; }
+.btn-sm.red { background: #dc2626; color: #fff; }
+
+.add-resume-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.add-resume-card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.add-resume-card label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+}
+.add-resume-card input,
+.add-resume-card textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+.add-resume-card textarea { resize: vertical; min-height: 60px; }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+.req { color: #dc2626; }
+
+.toggle-row {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  margin-bottom: 0.25rem;
+}
+.toggle-label input { display: none; }
+.toggle-switch {
+  width: 40px;
+  height: 22px;
+  background: #cbd5e1;
+  border-radius: 11px;
+  position: relative;
+  transition: background 0.2s;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+.toggle-label input:checked + .toggle-switch {
+  background: #2563eb;
+}
+.toggle-label input:checked + .toggle-switch::after {
+  transform: translateX(18px);
+}
+.toggle-text { font-weight: 600; }
+.toggle-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.form-success { color: #16a34a; margin: 0.5rem 0; font-size: 0.9rem; }
+.form-error { color: #dc2626; margin: 0.5rem 0; font-size: 0.9rem; }
+
+.filters {
+  margin-bottom: 1rem;
+}
+.filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+.filters select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.dashboard-error { color: #dc2626; margin-bottom: 1rem; }
+.candidates-section h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+.loading, .empty { color: #666; margin: 1rem 0; }
+
+.table-wrap { overflow-x: auto; }
+.candidates-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+.candidates-table th,
+.candidates-table td {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.candidates-table th {
+  background: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.candidates-table td { font-size: 0.9rem; }
+.candidates-table tbody tr:hover { background: #fafafa; }
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.status-invited { background: #dbeafe; color: #1d4ed8; }
+.status-in_progress { background: #fef3c7; color: #b45309; }
+.status-completed { background: #d1fae5; color: #047857; }
+.status-next_round { background: #e0e7ff; color: #3730a3; }
+.status-selected { background: #d1fae5; color: #065f46; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+}
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  line-height: 1;
+}
+.report-exchanges { margin-top: 1rem; }
+.report-exchanges h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.exchange {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+.exchange p { margin: 0.25rem 0; }
+
+.card-hint { margin: 0 0 1rem; color: #64748b; font-size: 0.875rem; }
+.form-divider { margin: 1.25rem 0; border: none; border-top: 1px solid #e2e8f0; }
+.form-fields-hint { margin: 0 0 0.75rem; font-size: 0.8rem; }
+
+.extraction-loading {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+}
+.extraction-loading-bar {
+  height: 6px;
+  background: linear-gradient(90deg, #0ea5e9 0%, #38bdf8 50%, #0ea5e9 100%);
+  background-size: 200% 100%;
+  border-radius: 3px;
+  animation: extraction-progress 1.2s ease-in-out infinite;
+}
+@keyframes extraction-progress {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.extraction-loading-text {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: #0369a1;
+  font-weight: 500;
+}
+
+.form-extract-success {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  color: #047857;
+  font-size: 0.9rem;
+}
+
+.upload-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 200px;
+}
+.file-input { font-size: 0.875rem; }
+.file-name { font-size: 0.8rem; color: #64748b; }
+
+.toggles-section { margin-top: 1rem; }
+.toggles-heading { font-size: 0.875rem; font-weight: 600; color: #334155; display: block; margin-bottom: 0.5rem; }
+.platform-result { padding: 0.75rem; border-radius: 8px; margin: 0.5rem 0; font-size: 0.9rem; }
+.platform-result.shortlisted { background: #d1fae5; color: #065f46; }
+.platform-result.not-shortlisted { background: #fef3c7; color: #92400e; }
+
+.report-photos, .report-video { margin-top: 1rem; }
+.report-photos h4, .report-video h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.report-photo-block { margin-bottom: 0.75rem; }
+.report-photo-block span { display: block; font-size: 0.8rem; color: #64748b; margin-bottom: 0.25rem; }
+.report-photo-block img { max-width: 200px; max-height: 150px; object-fit: cover; border-radius: 6px; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+.photo-placeholder { margin: 0.25rem 0; color: #64748b; font-size: 0.875rem; }
+.session-photos-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.session-photos-grid img { max-width: 120px; max-height: 90px; object-fit: cover; border-radius: 6px; }
+.report-video video { border-radius: 8px; background: #000; }
+
+.photo-cell { width: 48px; }
+.candidate-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; }
+.no-photo { color: #94a3b8; font-size: 0.85rem; }
+
+.report-agent-block { margin-top: 1rem; padding: 0.75rem; background: #f0f9ff; border-radius: 8px; }
+.report-agent-block h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.face-lip { font-weight: 600; }
+.face-lip-pass { color: #16a34a; }
+.face-lip-review { color: #d97706; }
+.face-lip-pending { color: #64748b; }

@@ -5,4 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onAppBlur: (fn) => {
     ipcRenderer.on('app-blur', () => fn())
   },
+  enterInterviewMode: () => {
+    ipcRenderer.send('enter-interview-mode')
+  },
 })

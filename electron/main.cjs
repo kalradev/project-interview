@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, screen } = require('electron')
+const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron')
 const path = require('path')
 
 let mainWindow = null
@@ -9,9 +9,9 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width,
     height,
-    fullscreen: true,
-    kiosk: true,
-    frame: false,
+    fullscreen: false,
+    kiosk: false,
+    frame: true,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -21,8 +21,8 @@ function createWindow() {
   })
 
   mainWindow.setMenu(null)
-  mainWindow.setAlwaysOnTop(true, 'screen-saver')
-  mainWindow.setFullScreen(true)
+  mainWindow.setAlwaysOnTop(false)
+  mainWindow.setFullScreen(false)
 
   const useDevServer = process.env.ELECTRON_DEV === '1'
   if (useDevServer) {
@@ -44,10 +44,12 @@ function createWindow() {
   })
 
   mainWindow.on('blur', () => {
-    mainWindow.webContents.send('app-blur')
-    setTimeout(() => {
-      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.focus()
-    }, 500)
+    if (mainWindow.isFullScreen()) {
+      mainWindow.webContents.send('app-blur')
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.focus()
+      }, 500)
+    }
   })
 }
 
@@ -63,6 +65,14 @@ function exitFullscreenAndQuit() {
 
 app.whenReady().then(() => {
   createWindow()
+
+  ipcMain.on('enter-interview-mode', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setFullScreen(true)
+      mainWindow.setKiosk(true)
+      mainWindow.setAlwaysOnTop(true, 'screen-saver')
+    }
+  })
 
   try {
     globalShortcut.register('Alt+Tab', () => {})

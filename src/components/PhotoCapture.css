@@ -1,0 +1,50 @@
+.photo-capture-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: #0f172a;
+}
+
+.photo-capture-card {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 480px;
+  width: 100%;
+  border: 1px solid #334155;
+  text-align: center;
+}
+
+.photo-capture-card h2 {
+  margin: 0 0 0.5rem 0;
+  color: #e2e8f0;
+}
+
+.photo-capture-desc {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+}
+
+.photo-capture-error {
+  color: #f87171;
+  font-size: 0.875rem;
+  margin: 0 0 1rem 0;
+}
+
+.photo-capture-video {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 8px;
+  background: #0f172a;
+  margin-bottom: 1rem;
+}
+
+.photo-capture-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+}
