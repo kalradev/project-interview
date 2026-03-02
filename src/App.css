@@ -1,3 +1,15 @@
+/* Interview: disable text selection to reduce copy-paste cheating (answer input stays selectable) */
+.interview-container {
+  user-select: none;
+  -webkit-user-select: none;
+  min-height: 100vh;
+}
+.interview-container textarea,
+.interview-container input[type="text"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 /* Interview page */
 .interview-page {
   max-width: 640px;

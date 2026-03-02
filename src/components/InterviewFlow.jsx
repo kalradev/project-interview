@@ -213,7 +213,20 @@ export function InterviewFlow({ onEnd }) {
   return (
     <div className="interview-flow">
       <header className="interview-flow-header">
-        <h1>Interview – {jobRole}</h1>
+        <div className="interview-flow-header-top">
+          <h1>Interview – {jobRole}</h1>
+          {window.electronAPI?.requestCloseInterview && (
+            <button
+              type="button"
+              className="btn btn-exit-interview"
+              onClick={handleEndInterview}
+              disabled={submitting}
+              title="End and exit the interview"
+            >
+              Exit interview
+            </button>
+          )}
+        </div>
         <p className="subtitle">Video mode: you are being recorded. Do not leave this window.</p>
       </header>
       <div className="interview-flow-video-row">

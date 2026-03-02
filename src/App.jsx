@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { useTabSwitchMonitor } from './hooks/useTabSwitchMonitor'
+import { useTabSwitchMonitor, WARNINGS_BEFORE_DISQUALIFY } from './hooks/useTabSwitchMonitor'
 import { InterviewConfigProvider, useInterviewConfig } from './context/InterviewConfig'
 import { LoginScreen } from './components/LoginScreen'
 import { SetupScreen } from './components/SetupScreen'
@@ -9,17 +9,24 @@ import { logEvent, endSession, computeIntegrity } from './api/client'
 import './App.css'
 
 const EVENT_TAB_SWITCH = 'tab_switch'
+const EVENT_COPY = 'copy_event'
 
-function WarningModal({ onDismiss }) {
+function WarningModal({ onDismiss, leaveCount }) {
+  const which = Math.min(leaveCount, WARNINGS_BEFORE_DISQUALIFY)
+  const remaining = WARNINGS_BEFORE_DISQUALIFY - which
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="warning-title">
       <div className="modal">
-        <h2 id="warning-title" className="modal-title">⚠️ Warning</h2>
+        <h2 id="warning-title" className="modal-title">⚠️ Warning {which} of {WARNINGS_BEFORE_DISQUALIFY}</h2>
         <p className="modal-text">
-          You attempted to leave the interview (e.g. Alt+F4 or switching away). Do not do this again.
+          You attempted to leave the interview (e.g. Alt+F4 or clicking outside the window). Do not do this again.
         </p>
         <p className="modal-text modal-text-highlight">
-          <strong>Next time you will be disqualified.</strong>
+          {remaining > 0 ? (
+            <strong>You will get {remaining} more warning{remaining !== 1 ? 's' : ''} before disqualification.</strong>
+          ) : (
+            <strong>Next time you will be disqualified.</strong>
+          )}
         </p>
         <button type="button" className="btn btn-primary" onClick={onDismiss}>
           I understand
@@ -40,7 +47,7 @@ function DisqualifiedScreen() {
       <div className="disqualified-card">
         <span className="disqualified-icon">🚫</span>
         <h1>Disqualified</h1>
-        <p>You have been disqualified for leaving the interview screen a second time.</p>
+        <p>You have been disqualified for leaving the interview screen more than {WARNINGS_BEFORE_DISQUALIFY} times.</p>
         <p className="disqualified-note">Please contact support if you believe this was an error.</p>
         {window.electronAPI?.requestCloseInterview && (
           <button type="button" className="btn btn-primary disqualified-close-btn" onClick={handleClose}>
@@ -82,13 +89,39 @@ function InterviewApp() {
     [isConnected, config.apiBaseUrl, config.sessionId, config.authToken]
   )
 
-  const { showWarning, isDisqualified, dismissWarning } = useTabSwitchMonitor({ onLeave })
+  const { showWarning, isDisqualified, dismissWarning, tabSwitchCount } = useTabSwitchMonitor({ onLeave })
 
   useEffect(() => {
     if (screen === 'interview' && window.electronAPI?.enterInterviewMode) {
       window.electronAPI.enterInterviewMode()
     }
   }, [screen])
+
+  // Prevent copy/cut and log as suspicious when in interview (reduces cheating via copy-paste/extensions)
+  useEffect(() => {
+    if (screen !== 'interview' || !config.apiBaseUrl || !config.sessionId || !config.authToken) return
+    const handleCopy = (e) => {
+      e.preventDefault()
+      if (isConnected) {
+        logEvent(config.apiBaseUrl, config.sessionId, EVENT_COPY, config.authToken, { action: 'copy' }, 'high').catch(() => {})
+      }
+    }
+    const handleCut = (e) => {
+      e.preventDefault()
+      if (isConnected) {
+        logEvent(config.apiBaseUrl, config.sessionId, EVENT_COPY, config.authToken, { action: 'cut' }, 'high').catch(() => {})
+      }
+    }
+    const handleContextMenu = (e) => e.preventDefault()
+    document.addEventListener('copy', handleCopy)
+    document.addEventListener('cut', handleCut)
+    document.addEventListener('contextmenu', handleContextMenu)
+    return () => {
+      document.removeEventListener('copy', handleCopy)
+      document.removeEventListener('cut', handleCut)
+      document.removeEventListener('contextmenu', handleContextMenu)
+    }
+  }, [screen, config.apiBaseUrl, config.sessionId, config.authToken, isConnected])
 
   if (isDisqualified) {
     return <DisqualifiedScreen />
@@ -124,22 +157,24 @@ function InterviewApp() {
 
   return (
     <>
-      {config.jobRole && config.sessionId && config.authToken ? (
-        <InterviewFlow onEnd={() => {}} />
-      ) : (
-        <div className="interview-page">
-          <header className="interview-header">
-            <h1>Interview in progress</h1>
-            <p className="subtitle">Do not leave this window.</p>
-          </header>
-          <main className="interview-main">
-            <div className="interview-placeholder">
-              <p>Connect via Setup (session + token) or log in as a candidate to see questions.</p>
-            </div>
-          </main>
-        </div>
-      )}
-      {showWarning && <WarningModal onDismiss={dismissWarning} />}
+      <div className="interview-container">
+        {config.jobRole && config.sessionId && config.authToken ? (
+          <InterviewFlow onEnd={() => {}} />
+        ) : (
+          <div className="interview-page">
+            <header className="interview-header">
+              <h1>Interview in progress</h1>
+              <p className="subtitle">Do not leave this window.</p>
+            </header>
+            <main className="interview-main">
+              <div className="interview-placeholder">
+                <p>Connect via Setup (session + token) or log in as a candidate to see questions.</p>
+              </div>
+            </main>
+          </div>
+        )}
+      </div>
+      {showWarning && <WarningModal onDismiss={dismissWarning} leaveCount={tabSwitchCount} />}
     </>
   )
 }

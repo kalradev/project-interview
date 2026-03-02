@@ -50,10 +50,39 @@
   margin: 0;
 }
 
+.interview-flow-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
 .interview-flow-header h1 {
   font-size: 1.25rem;
-  margin: 0 0 0.5rem 0;
+  margin: 0;
   color: #e2e8f0;
+}
+
+.btn-exit-interview {
+  flex-shrink: 0;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-exit-interview:hover:not(:disabled) {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.btn-exit-interview:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .question-block {

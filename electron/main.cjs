@@ -3,9 +3,11 @@ const path = require('path')
 
 let mainWindow = null
 let allowClose = false // true when user legitimately ends interview and requests close
+let interviewMode = false // when true, block copy/cut shortcuts to reduce cheating
 
 function createWindow() {
   allowClose = false
+  interviewMode = false
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
 
   mainWindow = new BrowserWindow({
@@ -35,6 +37,22 @@ function createWindow() {
   }
 
   mainWindow.once('ready-to-show', () => mainWindow.show())
+
+  // Block copy/cut and Windows key when in interview mode
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (!interviewMode) return
+    const key = (input.key || '').toLowerCase()
+    // Block Windows (Super/Meta) key so Start menu doesn't open
+    if (key === 'meta' || key === 'super' || input.meta) {
+      event.preventDefault()
+      return
+    }
+    if (input.control || input.meta) {
+      if (key === 'c' || key === 'x') {
+        event.preventDefault()
+      }
+    }
+  })
 
   mainWindow.on('closed', () => {
     mainWindow = null
@@ -72,6 +90,8 @@ app.whenReady().then(() => {
   createWindow()
 
   ipcMain.on('enter-interview-mode', () => {
+    interviewMode = true
+    registerInterviewShortcuts() // block Windows key so Start menu doesn't open
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setFullScreen(true)
       mainWindow.setKiosk(true)
@@ -80,6 +100,8 @@ app.whenReady().then(() => {
   })
 
   ipcMain.on('request-close-interview', () => {
+    interviewMode = false
+    unregisterInterviewShortcuts()
     allowClose = true
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.close()
@@ -98,7 +120,21 @@ app.whenReady().then(() => {
   } catch (_) {}
 })
 
+// When entering interview mode, block Windows (Super) key so Start menu doesn't open
+function registerInterviewShortcuts() {
+  try {
+    globalShortcut.register('Super', () => {}) // Windows key alone
+  } catch (_) {}
+}
+
+function unregisterInterviewShortcuts() {
+  try {
+    globalShortcut.unregister('Super')
+  } catch (_) {}
+}
+
 app.on('window-all-closed', () => {
+  unregisterInterviewShortcuts()
   globalShortcut.unregisterAll()
   app.quit()
 })

@@ -1,6 +1,6 @@
 # Interview Agent (Desktop Setup)
 
-Interview runs in an **installed desktop app** that takes the full screen. The candidate cannot switch to other apps; leaving the window triggers a warning, then disqualification.
+Interview runs in an **installed desktop app** that takes the full screen. The candidate cannot switch to other apps; leaving the window triggers a warning, then disqualification. Optionally connects to the **interview backend** (`interview/`) to log events (tab_switch) and end sessions.
 
 ## How it works
 
@@ -13,6 +13,16 @@ Interview runs in an **installed desktop app** that takes the full screen. The c
 ```bash
 npm install
 ```
+
+**Backend (optional, for event logging):** From project root, start the interview API (requires PostgreSQL and `.env` in `interview/`):
+
+```bash
+cd interview && pip install -r requirements.txt && uvicorn app.main:app --reload
+```
+
+API: http://localhost:8000 — Docs: http://localhost:8000/docs
+
+**Desktop app:**
 
 **Option A – Build and run the app (loads built files):**
 ```bash
@@ -35,11 +45,21 @@ npm run electron:build
 - **Windows**: `release/Interview Agent 1.0.0.exe` (NSIS installer). Run it to install; candidate opens "Interview Agent" from Start or desktop.
 - **macOS/Linux**: Use the same command; adjust `package.json` `build` section if you need `.dmg` or `.AppImage`.
 
+## Connecting to the interview backend
+
+1. Start the backend (see **Backend** above) and create a session (e.g. via `/api/v1/sessions` with Admin/Interviewer JWT).
+2. Open the desktop app. On first run you get a **Setup** screen.
+3. Enter **API base URL** (e.g. `http://localhost:8000`), **Session ID** (UUID from the backend), and **Auth token** (JWT from login). Click **Save and start (connected)**.
+4. Leave events (tab/window leave) are sent as `tab_switch` to `/api/v1/events/log`. On disqualify, the app also calls `/api/v1/sessions/end` and `/api/v1/integrity/compute/{session_id}`.
+
+To run without the backend, click **Start in standalone mode** on the setup screen.
+
 ## Candidate flow
 
-1. Install "Interview Agent" from the installer.
-2. Open the app → interview runs in fullscreen.
-3. Do not switch to other apps or windows; first time = warning, second time = disqualification.
+1. Install "Interview Agent" from the installer (or run with `npm run electron:dev`).
+2. If using the backend, the interviewer may pre-fill API URL, Session ID, and token; otherwise the candidate sees the setup screen.
+3. Open the app → interview runs in fullscreen.
+4. Do not switch to other apps or windows; first time = warning, second time = disqualification.
 
 ---
 
