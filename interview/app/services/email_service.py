@@ -1,5 +1,6 @@
 """Email service - send invite via Brevo (testing) or SMTP (later)."""
 
+import logging
 import smtplib
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
@@ -8,6 +9,8 @@ from email.mime.text import MIMEText
 import httpx
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 def _build_invite_body(
@@ -79,8 +82,16 @@ def _send_via_brevo(
                     "Content-Type": "application/json",
                 },
             )
-            return r.status_code == 201
-    except Exception:
+            if r.status_code != 201:
+                logger.warning(
+                    "Brevo invite email failed: status=%s body=%s",
+                    r.status_code,
+                    r.text[:500] if r.text else "",
+                )
+                return False
+            return True
+    except Exception as e:
+        logger.warning("Brevo invite email exception: %s", e, exc_info=True)
         return False
 
 
@@ -106,7 +117,8 @@ def _send_via_smtp(
             server.login(user, password)
             server.send_message(msg)
         return True
-    except Exception:
+    except Exception as e:
+        logger.warning("SMTP invite email exception: %s", e, exc_info=True)
         return False
 
 
@@ -148,4 +160,7 @@ def send_invite_email(
             to_email, subject, body, from_email, settings.brevo_api_key
         )
 
+    logger.warning(
+        "Invite email not sent: no SMTP or Brevo configured. Set SMTP_* or BREVO_API_KEY and BREVO_FROM_EMAIL in .env"
+    )
     return False

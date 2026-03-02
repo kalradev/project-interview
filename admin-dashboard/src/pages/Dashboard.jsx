@@ -24,7 +24,10 @@ export default function Dashboard() {
   const [formTechStack, setFormTechStack] = useState('')
   const [formResumeText, setFormResumeText] = useState('')
   const [formResumeUrl, setFormResumeUrl] = useState('')
-  const [formLinks, setFormLinks] = useState('')       // one URL per line
+  const [formLinksGitHub, setFormLinksGitHub] = useState('')
+  const [formLinksLinkedIn, setFormLinksLinkedIn] = useState('')
+  const [formLinksPortfolio, setFormLinksPortfolio] = useState('')
+  const [formLinksOther, setFormLinksOther] = useState('')
   const [formProjects, setFormProjects] = useState('') // Project 1, 2, 3... one per line
   const [formCertificates, setFormCertificates] = useState('')
   const [formExperience, setFormExperience] = useState('')
@@ -67,7 +70,10 @@ export default function Dashboard() {
     setFormName('')
     setFormJobRole('')
     setFormTechStack('')
-    setFormLinks('')
+    setFormLinksGitHub('')
+    setFormLinksLinkedIn('')
+    setFormLinksPortfolio('')
+    setFormLinksOther('')
     setFormProjects('')
     setFormCertificates('')
     setFormExperience('')
@@ -78,7 +84,10 @@ export default function Dashboard() {
     setFormName(data.full_name ?? '')
     setFormJobRole(data.job_role ?? '')
     setFormTechStack(Array.isArray(data.tech_stack) ? data.tech_stack.join(', ') : (data.tech_stack ?? ''))
-    setFormLinks(Array.isArray(data.links) ? data.links.join('\n') : (data.links ?? ''))
+    setFormLinksGitHub(Array.isArray(data.links_github) ? data.links_github.join('\n') : (data.links_github ?? ''))
+    setFormLinksLinkedIn(Array.isArray(data.links_linkedin) ? data.links_linkedin.join('\n') : (data.links_linkedin ?? ''))
+    setFormLinksPortfolio(Array.isArray(data.links_portfolio) ? data.links_portfolio.join('\n') : (data.links_portfolio ?? ''))
+    setFormLinksOther(Array.isArray(data.links_other) ? data.links_other.join('\n') : (data.links_other ?? ''))
     setFormProjects(Array.isArray(data.projects) ? data.projects.join('\n') : (data.projects ?? ''))
     setFormCertificates(Array.isArray(data.certificates) ? data.certificates.join('\n') : (data.certificates ?? ''))
     setFormExperience(Array.isArray(data.experience) ? data.experience.join('\n') : (data.experience ?? ''))
@@ -131,28 +140,46 @@ export default function Dashboard() {
     setFormSuccess('')
     setError('')
     try {
-      await addCandidate(token, {
+      const res = await addCandidate(token, {
         email: formEmail,
         full_name: formName || undefined,
         job_role: formJobRole,
         tech_stack: formTechStack ? formTechStack.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
         resume_text: formResumeText || undefined,
         resume_url: formResumeUrl || undefined,
-        links: formLinks ? formLinks.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
+        links: (() => {
+          const trim = (s) => s.trim()
+          const urls = [
+            ...(formLinksGitHub ? formLinksGitHub.split('\n').map(trim).filter(Boolean) : []),
+            ...(formLinksLinkedIn ? formLinksLinkedIn.split('\n').map(trim).filter(Boolean) : []),
+            ...(formLinksPortfolio ? formLinksPortfolio.split('\n').map(trim).filter(Boolean) : []),
+            ...(formLinksOther ? formLinksOther.split('\n').map(trim).filter(Boolean) : []),
+          ]
+          return urls.length ? urls : undefined
+        })(),
         projects: formProjects ? formProjects.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
         certificates: formCertificates ? formCertificates.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
         experience: formExperience ? formExperience.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
         source: 'manual',
         send_email: sendInvite,
       })
-      setFormSuccess(sendInvite ? 'Candidate added and invite email sent.' : 'Candidate added. No invite sent.')
+      if (sendInvite && res.email_sent === false) {
+        setFormSuccess('Candidate added but invite email could not be sent. Check Brevo/SMTP in server .env.')
+      } else if (sendInvite) {
+        setFormSuccess('Candidate added and invite email sent.')
+      } else {
+        setFormSuccess('Candidate added. No invite sent.')
+      }
       setFormEmail('')
       setFormName('')
       setFormJobRole('')
       setFormTechStack('')
       setFormResumeText('')
       setFormResumeUrl('')
-      setFormLinks('')
+      setFormLinksGitHub('')
+      setFormLinksLinkedIn('')
+      setFormLinksPortfolio('')
+      setFormLinksOther('')
       setFormProjects('')
       setFormCertificates('')
       setFormExperience('')
@@ -380,15 +407,47 @@ export default function Dashboard() {
               />
             </label>
 
-            <label>
-              Links (from resume — GitHub, LinkedIn, portfolio, etc.) — one per line
-              <textarea
-                value={formLinks}
-                onChange={(e) => setFormLinks(e.target.value)}
-                placeholder="https://github.com/… (one URL per line)"
-                rows={3}
-              />
-            </label>
+            <div className="links-by-platform">
+              <span className="links-by-platform-label">Links (from resume)</span>
+              <div className="links-by-platform-grid">
+                <label>
+                  GitHub
+                  <textarea
+                    value={formLinksGitHub}
+                    onChange={(e) => setFormLinksGitHub(e.target.value)}
+                    placeholder="https://github.com/…"
+                    rows={2}
+                  />
+                </label>
+                <label>
+                  LinkedIn
+                  <textarea
+                    value={formLinksLinkedIn}
+                    onChange={(e) => setFormLinksLinkedIn(e.target.value)}
+                    placeholder="https://linkedin.com/in/…"
+                    rows={2}
+                  />
+                </label>
+                <label>
+                  Portfolio
+                  <textarea
+                    value={formLinksPortfolio}
+                    onChange={(e) => setFormLinksPortfolio(e.target.value)}
+                    placeholder="https://…"
+                    rows={2}
+                  />
+                </label>
+                <label>
+                  Other (LeetCode, etc.)
+                  <textarea
+                    value={formLinksOther}
+                    onChange={(e) => setFormLinksOther(e.target.value)}
+                    placeholder="https://…"
+                    rows={2}
+                  />
+                </label>
+              </div>
+            </div>
 
             <label>
               Projects — one per line (Project 1, Project 2, …)
@@ -514,23 +573,25 @@ export default function Dashboard() {
                     <td>{c.ats_score != null ? c.ats_score : '—'}</td>
                     <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
                     <td>{formatDate(c.invited_at)}</td>
-                    <td>
-                      <button type="button" className="btn btn-sm" onClick={() => openReport(c.id)}>
-                        Report
-                      </button>
-                      {c.status === 'completed' || c.status === 'invited' ? (
-                        <>
-                          <button type="button" className="btn btn-sm" onClick={() => handleAction(c.id, 'next_round')}>
-                            Next round
-                          </button>
-                          <button type="button" className="btn btn-sm green" onClick={() => handleAction(c.id, 'selected')}>
-                            Select
-                          </button>
-                          <button type="button" className="btn btn-sm red" onClick={() => handleAction(c.id, 'rejected')}>
-                            Reject
-                          </button>
-                        </>
-                      ) : null}
+                    <td className="actions-cell">
+                      <div className="actions-buttons">
+                        <button type="button" className="btn-action btn-action-report" onClick={() => openReport(c.id)} title="View report">
+                          Report
+                        </button>
+                        {(c.status === 'completed' || c.status === 'invited') && (
+                          <>
+                            <button type="button" className="btn-action btn-action-next" onClick={() => handleAction(c.id, 'next_round')} title="Advance to next round">
+                              Next round
+                            </button>
+                            <button type="button" className="btn-action btn-action-select" onClick={() => handleAction(c.id, 'selected')} title="Select candidate">
+                              Select
+                            </button>
+                            <button type="button" className="btn-action btn-action-reject" onClick={() => handleAction(c.id, 'rejected')} title="Reject candidate">
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

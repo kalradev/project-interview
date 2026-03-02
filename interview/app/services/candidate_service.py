@@ -36,10 +36,11 @@ async def add_candidate(
     interview_scheduled_at: datetime | None = None,
     send_email: bool = True,
     ats_score: float | None = None,
-) -> tuple[User, CandidateProfile, str]:
+) -> tuple[User, CandidateProfile, str, bool]:
     """
     Create a candidate user and profile, optionally send invite email.
-    Returns (user, profile, plain_password).
+    Returns (user, profile, plain_password, email_sent).
+    email_sent is True if invite was sent successfully, False if send_email was False or send failed.
     If interview_scheduled_at is None, defaults to 24–48 hours from now (placeholder).
     """
     existing = await db.execute(select(User).where(User.email == email))
@@ -82,9 +83,10 @@ async def add_candidate(
     await db.refresh(profile)
     await db.refresh(user)
 
+    email_sent = False
     if send_email:
         settings = get_settings()
-        send_invite_email(
+        email_sent = send_invite_email(
             to_email=email,
             password=password,
             interview_scheduled_at=interview_scheduled_at,
@@ -92,7 +94,7 @@ async def add_candidate(
             candidate_name=full_name,
         )
 
-    return user, profile, password
+    return user, profile, password, email_sent
 
 
 async def get_candidate_by_user_id(db: AsyncSession, user_id: UUID) -> Optional[CandidateProfile]:

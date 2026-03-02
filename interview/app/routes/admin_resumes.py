@@ -17,7 +17,7 @@ from app.services.resume_file_service import extract_text_from_resume_file
 from app.services.resume_platform_service import (
     compute_ats_score,
     extract_email_from_resume,
-    extract_resume_details,
+    extract_resume_details_async,
     is_shortlisted,
 )
 
@@ -34,6 +34,10 @@ def _details_to_response(details: dict) -> ResumeExtractResponse:
         job_role=details.get("job_role", ""),
         tech_stack=details.get("tech_stack", []),
         links=details.get("links", []),
+        links_github=details.get("links_github", []),
+        links_linkedin=details.get("links_linkedin", []),
+        links_portfolio=details.get("links_portfolio", []),
+        links_other=details.get("links_other", []),
         projects=details.get("projects", []),
         certificates=details.get("certificates", []),
         experience=details.get("experience", []),
@@ -46,8 +50,8 @@ async def extract_resume(
     payload: ResumeExtractRequest,
     _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
 ):
-    """Extract email, name, job role, tech stack from resume text for form pre-fill. User can edit and save."""
-    details = extract_resume_details(payload.resume_text)
+    """Extract structured details: preprocess with section markers, then LLM or rule-based parse."""
+    details = await extract_resume_details_async(payload.resume_text)
     return _details_to_response(details)
 
 
@@ -78,7 +82,7 @@ async def extract_resume_file(
                 "Use a PDF/DOCX with selectable text, or paste the resume content into the text area instead."
             ),
         )
-    details = extract_resume_details(text)
+    details = await extract_resume_details_async(text)
     return _details_to_response(details)
 
 
@@ -114,7 +118,7 @@ async def resume_from_platform(
         )
 
     try:
-        user, profile, _ = await add_candidate(
+        user, profile, _, _email_sent = await add_candidate(
             db,
             email=email,
             full_name=payload.full_name,

@@ -23,6 +23,20 @@ def extract_text_from_resume_file(content: bytes, filename: str) -> Optional[str
 
 
 def _extract_pdf(content: bytes) -> Optional[str]:
+    # Prefer pdfplumber for layout preservation (better for multi-column resumes)
+    try:
+        import pdfplumber
+        with pdfplumber.open(BytesIO(content)) as pdf:
+            parts = []
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    parts.append(text)
+            result = "\n".join(parts).strip() or None
+            if result:
+                return result
+    except Exception as e:
+        logger.debug("pdfplumber PDF extraction failed, trying pypdf: %s", e)
     try:
         from pypdf import PdfReader
         reader = PdfReader(BytesIO(content))

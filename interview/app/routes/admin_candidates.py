@@ -18,6 +18,7 @@ from app.schemas.candidate import (
     AgentReportBlock,
     CandidateAction,
     CandidateCreate,
+    CandidateImportResponse,
     CandidateResponse,
     InterviewExchangeResponse,
     InterviewReportResponse,
@@ -54,7 +55,7 @@ def _candidate_to_response(profile: CandidateProfile, email: str, full_name: str
     )
 
 
-@router.post("", response_model=CandidateResponse)
+@router.post("", response_model=CandidateImportResponse)
 async def import_candidate(
     payload: CandidateCreate,
     db: AsyncSession = Depends(get_async_session),
@@ -62,7 +63,7 @@ async def import_candidate(
 ):
     """Import a candidate (from Naukri/manual/CSV). Creates user, sends invite email with password and interview time."""
     try:
-        user, profile, _ = await add_candidate(
+        user, profile, _, email_sent = await add_candidate(
             db,
             email=payload.email,
             full_name=payload.full_name,
@@ -80,7 +81,10 @@ async def import_candidate(
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    return _candidate_to_response(profile, user.email, user.full_name)
+    return CandidateImportResponse(
+        candidate=_candidate_to_response(profile, user.email, user.full_name),
+        email_sent=email_sent,
+    )
 
 
 @router.get("", response_model=list[CandidateResponse])

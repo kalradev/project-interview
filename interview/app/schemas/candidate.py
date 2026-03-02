@@ -49,6 +49,13 @@ class CandidateResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CandidateImportResponse(BaseModel):
+    """Response when importing a candidate: candidate data + whether invite email was sent."""
+
+    candidate: CandidateResponse
+    email_sent: bool  # True if invite email was successfully sent (or send_email was False)
+
+
 class ResumeExtractRequest(BaseModel):
     """Request to extract details from resume text for form pre-fill."""
 
@@ -62,7 +69,11 @@ class ResumeExtractResponse(BaseModel):
     full_name: str = ""
     job_role: str = ""
     tech_stack: list[str] = []
-    links: list[str] = []
+    links: list[str] = []  # flat list (all platforms combined)
+    links_github: list[str] = []
+    links_linkedin: list[str] = []
+    links_portfolio: list[str] = []
+    links_other: list[str] = []
     projects: list[str] = []
     certificates: list[str] = []
     experience: list[str] = []
