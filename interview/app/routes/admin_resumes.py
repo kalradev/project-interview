@@ -27,7 +27,7 @@ ALLOWED_EXTENSIONS = {".pdf", ".docx"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
-def _details_to_response(details: dict) -> ResumeExtractResponse:
+def _details_to_response(details: dict, ats_score: float = 0.0) -> ResumeExtractResponse:
     return ResumeExtractResponse(
         email=details.get("email", ""),
         full_name=details.get("full_name", ""),
@@ -42,6 +42,7 @@ def _details_to_response(details: dict) -> ResumeExtractResponse:
         certificates=details.get("certificates", []),
         experience=details.get("experience", []),
         resume_text=details.get("resume_text", ""),
+        ats_score=ats_score,
     )
 
 
@@ -52,7 +53,8 @@ async def extract_resume(
 ):
     """Extract structured details: preprocess with section markers, then LLM or rule-based parse."""
     details = await extract_resume_details_async(payload.resume_text)
-    return _details_to_response(details)
+    ats_score = compute_ats_score(payload.resume_text, details.get("job_role") or "")
+    return _details_to_response(details, ats_score=ats_score)
 
 
 @router.post("/extract-file", response_model=ResumeExtractResponse)
@@ -83,7 +85,8 @@ async def extract_resume_file(
             ),
         )
     details = await extract_resume_details_async(text)
-    return _details_to_response(details)
+    ats_score = compute_ats_score(text, details.get("job_role") or "")
+    return _details_to_response(details, ats_score=ats_score)
 
 
 @router.post("/from-platform", response_model=ResumeFromPlatformResponse)

@@ -28,9 +28,10 @@ export default function Dashboard() {
   const [formLinksLinkedIn, setFormLinksLinkedIn] = useState('')
   const [formLinksPortfolio, setFormLinksPortfolio] = useState('')
   const [formLinksOther, setFormLinksOther] = useState('')
-  const [formProjects, setFormProjects] = useState('') // Project 1, 2, 3... one per line
+  const [formProjects, setFormProjects] = useState([]) // string[]: one item per project (multi-line allowed)
   const [formCertificates, setFormCertificates] = useState('')
-  const [formExperience, setFormExperience] = useState('')
+  const [formExperience, setFormExperience] = useState([]) // string[]: one item per experience entry
+  const [formAtsScore, setFormAtsScore] = useState(null) // ATS score 0–100 from extract (null until extracted)
   const [sendInvite, setSendInvite] = useState(true) // Toggle: admin decides to take interview
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formExtractLoading, setFormExtractLoading] = useState(false)
@@ -74,9 +75,10 @@ export default function Dashboard() {
     setFormLinksLinkedIn('')
     setFormLinksPortfolio('')
     setFormLinksOther('')
-    setFormProjects('')
+    setFormProjects([])
     setFormCertificates('')
-    setFormExperience('')
+    setFormExperience([])
+    setFormAtsScore(null)
   }
 
   function fillFormFromExtract(data) {
@@ -88,10 +90,11 @@ export default function Dashboard() {
     setFormLinksLinkedIn(Array.isArray(data.links_linkedin) ? data.links_linkedin.join('\n') : (data.links_linkedin ?? ''))
     setFormLinksPortfolio(Array.isArray(data.links_portfolio) ? data.links_portfolio.join('\n') : (data.links_portfolio ?? ''))
     setFormLinksOther(Array.isArray(data.links_other) ? data.links_other.join('\n') : (data.links_other ?? ''))
-    setFormProjects(Array.isArray(data.projects) ? data.projects.join('\n') : (data.projects ?? ''))
+    setFormProjects(Array.isArray(data.projects) ? data.projects : (data.projects ? [data.projects] : []))
     setFormCertificates(Array.isArray(data.certificates) ? data.certificates.join('\n') : (data.certificates ?? ''))
-    setFormExperience(Array.isArray(data.experience) ? data.experience.join('\n') : (data.experience ?? ''))
+    setFormExperience(Array.isArray(data.experience) ? data.experience : (data.experience ? [data.experience] : []))
     if (data.resume_text) setFormResumeText(data.resume_text)
+    setFormAtsScore(typeof data.ats_score === 'number' ? data.ats_score : null)
     setFormExtractSuccess(true)
   }
 
@@ -124,7 +127,7 @@ export default function Dashboard() {
     setFormExtractSuccess(false)
     clearExtractedFormFields()
     try {
-      const data = await extractResumeFromFile(token, formUploadedFile)
+      const data = await extractResumeFromFile(getToken(), formUploadedFile)
       fillFormFromExtract(data)
       setFormUploadedFile(null)
     } catch (err) {
@@ -157,9 +160,9 @@ export default function Dashboard() {
           ]
           return urls.length ? urls : undefined
         })(),
-        projects: formProjects ? formProjects.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
+        projects: formProjects.length ? formProjects.map((s) => s.trim()).filter(Boolean) : undefined,
         certificates: formCertificates ? formCertificates.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
-        experience: formExperience ? formExperience.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
+        experience: formExperience.length ? formExperience.map((s) => s.trim()).filter(Boolean) : undefined,
         source: 'manual',
         send_email: sendInvite,
       })
@@ -180,9 +183,10 @@ export default function Dashboard() {
       setFormLinksLinkedIn('')
       setFormLinksPortfolio('')
       setFormLinksOther('')
-      setFormProjects('')
+      setFormProjects([])
       setFormCertificates('')
-      setFormExperience('')
+      setFormExperience([])
+      setFormAtsScore(null)
       setFormUploadedFile(null)
       setFormExtractSuccess(false)
       setShowForm(false)
@@ -308,7 +312,7 @@ export default function Dashboard() {
         <section className="add-resume-card">
           <h2>Add resume</h2>
           <p className="card-hint">
-            Upload a resume (PDF/DOCX) or paste text below, then click Extract. The form will be filled automatically; edit any field and save to database.
+            Upload a resume (PDF/DOCX), then click Extract. The form will be filled automatically; edit any field and save to database.
           </p>
 
           {(formExtractLoading || formExtractFileLoading) && (
@@ -338,19 +342,6 @@ export default function Dashboard() {
                 {formExtractFileLoading ? 'Extracting…' : 'Extract from file'}
               </button>
             </div>
-
-            <label>
-              Or paste resume text (then click Extract)
-              <textarea
-                value={formResumeText}
-                onChange={(e) => setFormResumeText(e.target.value)}
-                placeholder="Paste full resume content here…"
-                rows={4}
-              />
-            </label>
-            <button type="button" className="btn btn-outline" onClick={handleExtractResume} disabled={formExtractLoading || !formResumeText.trim()}>
-              {formExtractLoading ? 'Extracting…' : 'Extract details from text'}
-            </button>
 
             <hr className="form-divider" />
             <p className="card-hint form-fields-hint">Edit any field below if needed, then use toggles and click Add candidate to save.</p>
@@ -397,16 +388,11 @@ export default function Dashboard() {
                 />
               </label>
             </div>
-            <label>
-              Resume URL (optional)
-              <input
-                type="url"
-                value={formResumeUrl}
-                onChange={(e) => setFormResumeUrl(e.target.value)}
-                placeholder="https://…"
-              />
-            </label>
-
+            {formAtsScore != null && (
+              <p className="form-ats-score">
+                <strong>ATS score:</strong> {Number(formAtsScore).toFixed(1)}%
+              </p>
+            )}
             <div className="links-by-platform">
               <span className="links-by-platform-label">Links (from resume)</span>
               <div className="links-by-platform-grid">
@@ -449,18 +435,35 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <label>
-              Projects — one per line (Project 1, Project 2, …)
-              <textarea
-                value={formProjects}
-                onChange={(e) => setFormProjects(e.target.value)}
-                placeholder="Project name or short description per line"
-                rows={4}
-              />
-            </label>
+            <div className="form-section">
+              <span className="form-section-label">Projects — one column per project</span>
+              {(formProjects.length === 0 ? [''] : formProjects).map((text, i) => (
+                <div key={i} className="form-project-row">
+                  <label>
+                    Project {i + 1}
+                    <textarea
+                      value={text}
+                      onChange={(e) => {
+                        const next = [...(formProjects.length ? formProjects : [''])]
+                        next[i] = e.target.value
+                        setFormProjects(next)
+                      }}
+                      placeholder="Project name or short description"
+                      rows={3}
+                    />
+                  </label>
+                  <button type="button" className="btn btn-outline btn-remove" onClick={() => setFormProjects(formProjects.length ? formProjects.filter((_, j) => j !== i) : [])}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="btn btn-outline" onClick={() => setFormProjects([...(formProjects.length ? formProjects : []), ''])}>
+                Add project
+              </button>
+            </div>
 
             <label>
-              Certificates — one per line
+              Certificates — one per line (all in one column)
               <textarea
                 value={formCertificates}
                 onChange={(e) => setFormCertificates(e.target.value)}
@@ -469,15 +472,32 @@ export default function Dashboard() {
               />
             </label>
 
-            <label>
-              Experience — one entry per line
-              <textarea
-                value={formExperience}
-                onChange={(e) => setFormExperience(e.target.value)}
-                placeholder="Role, company, duration — one per line"
-                rows={4}
-              />
-            </label>
+            <div className="form-section">
+              <span className="form-section-label">Experience — one column per entry</span>
+              {(formExperience.length === 0 ? [''] : formExperience).map((text, i) => (
+                <div key={i} className="form-experience-row">
+                  <label>
+                    Experience {i + 1}
+                    <textarea
+                      value={text}
+                      onChange={(e) => {
+                        const next = [...(formExperience.length ? formExperience : [''])]
+                        next[i] = e.target.value
+                        setFormExperience(next)
+                      }}
+                      placeholder="Role, company, duration — one entry per column"
+                      rows={3}
+                    />
+                  </label>
+                  <button type="button" className="btn btn-outline btn-remove" onClick={() => setFormExperience(formExperience.length ? formExperience.filter((_, j) => j !== i) : [])}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="btn btn-outline" onClick={() => setFormExperience([...(formExperience.length ? formExperience : []), ''])}>
+                Add experience
+              </button>
+            </div>
 
             {/* Toggles: add more entries here to show additional admin options */}
             <div className="toggles-section">

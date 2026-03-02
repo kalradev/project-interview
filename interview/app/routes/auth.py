@@ -1,5 +1,7 @@
 """Auth routes - login, register, JWT."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +14,7 @@ from app.auth.jwt import create_access_token
 from app.auth.dependencies import require_roles
 from app.auth.password import hash_password, verify_password
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -43,19 +46,28 @@ async def login(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Login with JSON body; returns JWT."""
-    result = await db.execute(select(User).where(User.email == payload.email))
-    user = result.scalar_one_or_none()
-    if not user or not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
+    try:
+        result = await db.execute(select(User).where(User.email == payload.email))
+        user = result.scalar_one_or_none()
+        if not user or not verify_password(payload.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+            )
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User inactive")
+        settings = get_settings()
+        access_token = create_access_token(subject=user.id, role=user.role)
+        return Token(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=settings.access_token_expire_minutes * 60,
         )
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User inactive")
-    settings = get_settings()
-    access_token = create_access_token(subject=user.id, role=user.role)
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        expires_in=settings.access_token_expire_minutes * 60,
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Login failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database unavailable. Ensure PostgreSQL is running and POSTGRES_* in interview/.env are correct. Then run: python -m scripts.seed_admin",
+        )

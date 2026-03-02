@@ -78,6 +78,7 @@ class ResumeExtractResponse(BaseModel):
     certificates: list[str] = []
     experience: list[str] = []
     resume_text: str = ""
+    ats_score: float = 0.0  # 0–100; computed on extract
 
 
 class ResumeFromPlatformRequest(BaseModel):

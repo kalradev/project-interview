@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 from app.config import get_settings
+from app.services.resume_platform_service import is_education_line
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,8 @@ Step 2: Extract data ONLY after normalization. Never mix content across sections
 Step 3: Return data in the strict JSON schema below.
 
 Critical rules:
-- Projects = standalone projects (side projects, academic projects, open source). Do NOT put work experience or job responsibilities in projects. Each project is one object with name, description, technologies.
-- Experience = employment history only (role, company, dates, responsibilities). Bullets under a job belong to that job only.
+- Projects = standalone projects (side projects, academic projects, open source). Do NOT put work experience or job responsibilities in projects. Each project is one object with name, description, technologies. Extract EVERY project listed on the resume with no omission; each project will be shown in its own column.
+- Experience = employment history only (role, company, dates, responsibilities). Bullets under a job belong to that job only. Extract EVERY experience/internship entry with no omission; each entry will be shown in its own column.
 - Extract ALL skills and technologies listed (every language, framework, tool).
 - Extract ALL links with full URLs (GitHub, LinkedIn, portfolio, etc.). Use complete URLs only.
 
@@ -161,15 +162,31 @@ def _llm_result_to_extract_dict(data: dict[str, Any], original_text: str) -> dic
 
     email = _strip_section_marker((contact.get("email") or "").strip() or "")
     full_name = _strip_section_marker((data.get("full_name") or "").strip() or "")
-    job_role = _strip_section_marker((data.get("job_title") or "").strip() or "")
+    job_role_raw = _strip_section_marker((data.get("job_title") or "").strip() or "")
+    # Do not use education text (e.g. college name + CGPA) as job_role
+    job_role = "" if is_education_line(job_role_raw) else job_role_raw
 
     def _valid_link(u: str) -> bool:
         u = (u or "").strip()
-        if not u or len(u) < 15:
+        if not u or len(u) < 10:
             return False
         if u.rstrip("/").endswith("/_") or "/_ " in u:
             return False
         return True
+
+    def _normalize_url(u: str) -> str:
+        u = (u or "").strip()
+        if not u:
+            return ""
+        u = _strip_section_marker(u)
+        if not u.lower().startswith("http"):
+            if "github.com" in u.lower():
+                u = "https://" + u if not u.startswith("//") else "https:" + u
+            elif "linkedin.com" in u.lower():
+                u = "https://" + u if not u.startswith("//") else "https:" + u
+            else:
+                u = "https://" + u
+        return u.rstrip(".,;:)")
 
     links_list = []
     links_github: list[str] = []
@@ -180,7 +197,7 @@ def _llm_result_to_extract_dict(data: dict[str, Any], original_text: str) -> dic
     for key in ("github", "linkedin", "leetcode", "portfolio"):
         val = links_obj.get(key)
         if val and isinstance(val, str):
-            val = _strip_section_marker(val.strip())
+            val = _normalize_url(val)
             if _valid_link(val):
                 links_list.append(val)
                 if key == "github":
@@ -193,7 +210,7 @@ def _llm_result_to_extract_dict(data: dict[str, Any], original_text: str) -> dic
                     links_other.append(val)
     for u in links_obj.get("other") or []:
         if u and isinstance(u, str):
-            u = _strip_section_marker(u.strip())
+            u = _normalize_url(u)
             if _valid_link(u):
                 links_list.append(u)
                 links_other.append(u)
@@ -215,7 +232,8 @@ def _llm_result_to_extract_dict(data: dict[str, Any], original_text: str) -> dic
                         if s:
                             tech_stack.append(s)
 
-    experience_lines = []
+    # One experience entry per job: each entry is one string (header + bullets joined by newline)
+    experience_blocks: list[str] = []
     for item in experience_arr:
         if not isinstance(item, dict):
             continue
@@ -225,10 +243,11 @@ def _llm_result_to_extract_dict(data: dict[str, Any], original_text: str) -> dic
         end = (item.get("end_date") or "").strip()
         loc = _strip_section_marker((item.get("location") or "").strip())
         parts = [p for p in [role, company, f"{start} – {end}".strip(" – ") if start or end else None, loc] if p]
-        experience_lines.append(" | ".join(parts))
+        block_lines = [" | ".join(parts)]
         for r in (item.get("responsibilities") or []):
             if r and isinstance(r, str) and r.strip():
-                experience_lines.append("  • " + _strip_section_marker(r.strip()))
+                block_lines.append("  • " + _strip_section_marker(r.strip()))
+        experience_blocks.append("\n".join(block_lines))
     for item in internships_arr:
         if not isinstance(item, dict):
             continue
@@ -237,8 +256,8 @@ def _llm_result_to_extract_dict(data: dict[str, Any], original_text: str) -> dic
         start = (item.get("start_date") or "").strip()
         end = (item.get("end_date") or "").strip()
         parts = [p for p in [f"Intern: {role}" if role else "Intern", company, f"{start} – {end}".strip(" – ") if start or end else None] if p]
-        experience_lines.append(" | ".join(parts))
-    experience = experience_lines[:25]
+        experience_blocks.append(" | ".join(parts))
+    experience = experience_blocks[:25]
 
     project_lines = []
     for item in projects_arr:

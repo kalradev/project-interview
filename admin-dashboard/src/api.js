@@ -83,14 +83,20 @@ export async function extractResumeDetails(token, resumeText) {
 
 /** Upload resume file (PDF or DOCX); returns extracted details for form pre-fill. */
 export async function extractResumeFromFile(token, file) {
+  if (!token) {
+    throw new Error('Not logged in. Please sign in again.')
+  }
   const form = new FormData()
   form.append('file', file)
   const res = await fetch(`${BASE}/api/v1/admin/resumes/extract-file`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { Authorization: `Bearer ${token}` },
     body: form,
   })
   if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('Session expired or invalid. Please sign in again.')
+    }
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail || 'Extract from file failed')
   }
