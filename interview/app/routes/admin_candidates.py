@@ -64,7 +64,7 @@ async def import_candidate(
 ):
     """Import a candidate (from Naukri/manual/CSV). Creates user, sends invite email with password and interview time."""
     try:
-        user, profile, _, email_sent = await add_candidate(
+        user, profile, _, email_sent, email_error = await add_candidate(
             db,
             email=payload.email,
             full_name=payload.full_name,
@@ -85,6 +85,7 @@ async def import_candidate(
     return CandidateImportResponse(
         candidate=_candidate_to_response(profile, user.email, user.full_name),
         email_sent=email_sent,
+        email_error=email_error or None,
     )
 
 

@@ -118,7 +118,7 @@ async def resume_from_platform(
         )
 
     try:
-        user, profile, _, _email_sent = await add_candidate(
+        user, profile, _, _email_sent, _ = await add_candidate(
             db,
             email=email,
             full_name=payload.full_name,

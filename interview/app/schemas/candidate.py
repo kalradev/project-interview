@@ -54,6 +54,7 @@ class CandidateImportResponse(BaseModel):
 
     candidate: CandidateResponse
     email_sent: bool  # True if invite email was successfully sent (or send_email was False)
+    email_error: Optional[str] = None  # Reason when email_sent is False (e.g. Brevo/SMTP failure)
 
 
 class ResumeExtractRequest(BaseModel):

@@ -62,8 +62,8 @@ def _send_via_brevo(
     body: str,
     from_email: str,
     api_key: str,
-) -> bool:
-    """Send using Brevo (Sendinblue) v3 transactional API. Returns True on success."""
+) -> tuple[bool, str]:
+    """Send using Brevo (Sendinblue) v3 transactional API. Returns (True, '') on success, (False, error_msg) on failure."""
     url = "https://api.brevo.com/v3/smtp/email"
     payload = {
         "sender": {"name": "Interview Team", "email": from_email},
@@ -83,16 +83,15 @@ def _send_via_brevo(
                 },
             )
             if r.status_code != 201:
-                logger.warning(
-                    "Brevo invite email failed: status=%s body=%s",
-                    r.status_code,
-                    r.text[:500] if r.text else "",
-                )
-                return False
-            return True
+                err = f"Brevo returned {r.status_code}: {r.text[:300] if r.text else 'no body'}"
+                logger.warning("Brevo invite email failed: %s", err)
+                return False, err
+            logger.info("Brevo invite email sent to %s", to_email)
+            return True, ""
     except Exception as e:
+        err = str(e)
         logger.warning("Brevo invite email exception: %s", e, exc_info=True)
-        return False
+        return False, err
 
 
 def _send_via_smtp(
@@ -104,8 +103,8 @@ def _send_via_smtp(
     port: int,
     user: str,
     password: str,
-) -> bool:
-    """Send using SMTP. Returns True on success."""
+) -> tuple[bool, str]:
+    """Send using SMTP. Returns (True, '') on success, (False, error_msg) on failure."""
     msg = MIMEMultipart()
     msg["Subject"] = subject
     msg["From"] = from_email
@@ -116,10 +115,12 @@ def _send_via_smtp(
             server.starttls()
             server.login(user, password)
             server.send_message(msg)
-        return True
+        logger.info("SMTP invite email sent to %s", to_email)
+        return True, ""
     except Exception as e:
+        err = str(e)
         logger.warning("SMTP invite email exception: %s", e, exc_info=True)
-        return False
+        return False, err
 
 
 def send_invite_email(
@@ -128,11 +129,11 @@ def send_invite_email(
     interview_scheduled_at: datetime | None,
     setup_download_url: str,
     candidate_name: str | None = None,
-) -> bool:
+) -> tuple[bool, str]:
     """
     Send interview invite email with login credentials, interview time, and setup link.
     Uses SMTP first if configured (e.g. Gmail) so From shows your address; else Brevo.
-    Returns True if sent, False if email not configured or send failed.
+    Returns (True, '') if sent, (False, error_message) if not configured or send failed.
     """
     settings = get_settings()
     subject, body = _build_invite_body(
@@ -142,7 +143,7 @@ def send_invite_email(
     # Prefer SMTP when set: sent by your mail server, so From is your email (no Brevo relay).
     if settings.smtp_host and settings.smtp_user and settings.smtp_password:
         from_email = settings.smtp_from_email or settings.smtp_user
-        if _send_via_smtp(
+        ok, err = _send_via_smtp(
             to_email,
             subject,
             body,
@@ -151,16 +152,21 @@ def send_invite_email(
             settings.smtp_port,
             settings.smtp_user,
             settings.smtp_password,
-        ):
-            return True
+        )
+        return (ok, err) if ok else (False, f"SMTP: {err}")
 
     if settings.brevo_api_key:
         from_email = settings.brevo_from_email or settings.smtp_from_email or "noreply@example.com"
-        return _send_via_brevo(
+        ok, err = _send_via_brevo(
             to_email, subject, body, from_email, settings.brevo_api_key
         )
+        if ok:
+            return True, ""
+        return False, f"Brevo: {err}"
 
-    logger.warning(
-        "Invite email not sent: no SMTP or Brevo configured. Set SMTP_* or BREVO_API_KEY and BREVO_FROM_EMAIL in .env"
+    msg = (
+        "No SMTP or Brevo configured. Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD for Gmail, "
+        "or BREVO_API_KEY and BREVO_FROM_EMAIL in .env. For Brevo, verify the sender in Brevo dashboard."
     )
-    return False
+    logger.warning("Invite email not sent: %s", msg)
+    return False, msg

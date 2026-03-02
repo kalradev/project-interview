@@ -35,6 +35,13 @@
   font-size: 0.875rem;
 }
 
+.login-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  margin-top: 0.25rem;
+}
+
 .login-input {
   display: block;
   width: 100%;
@@ -45,6 +52,42 @@
   background: #0f172a;
   color: #e2e8f0;
   font-size: 0.9rem;
+}
+
+.login-input-password {
+  padding-right: 2.75rem;
+}
+
+.login-password-wrap .login-input {
+  margin-top: 0;
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-password-toggle:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.login-password-icon {
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .login-input:focus {

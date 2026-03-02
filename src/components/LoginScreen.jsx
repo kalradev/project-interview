@@ -8,6 +8,7 @@ export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
   const [apiBaseUrl, setApiBaseUrl] = useState(config.apiBaseUrl || 'http://localhost:8000')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -72,14 +73,29 @@ export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
           </label>
           <label className="login-label">
             Password
-            <input
-              type="password"
-              className="login-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Password from invite email"
-            />
+            <div className="login-password-wrap">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="login-input login-input-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Password from invite email"
+              />
+              <button
+                type="button"
+                className="login-password-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <span className="login-password-icon" aria-hidden>🙈</span>
+                ) : (
+                  <span className="login-password-icon" aria-hidden>👁</span>
+                )}
+              </button>
+            </div>
           </label>
           {error && <p className="login-error">{error}</p>}
           <div className="login-actions">
