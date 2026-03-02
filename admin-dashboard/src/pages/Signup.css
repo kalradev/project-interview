@@ -1,0 +1,218 @@
+/* Full-page layout with grid behind content */
+.signup-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Chess-board grid – fixed background */
+.signup-grid-bg {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols, 24), 1fr);
+  grid-template-rows: repeat(var(--grid-rows, 18), 1fr);
+  gap: 1px;
+  padding: 0;
+  background: var(--color-bg-subtle, #e2eaf2);
+  z-index: 0;
+}
+
+.signup-grid-cell {
+  min-width: 0;
+  min-height: 0;
+  background: var(--cell-bg);
+  transition: transform 0.2s var(--ease-out), background 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.signup-grid-cell--light {
+  --cell-bg: #e8eef4;
+  background: var(--cell-bg);
+}
+
+.signup-grid-cell--dark {
+  --cell-bg: #dde4ec;
+  background: var(--cell-bg);
+}
+
+/* Hover: cell lifts and brightens under cursor */
+.signup-grid-cell:hover {
+  transform: scale(1.08);
+  z-index: 1;
+  background: #f0f4f8;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.15);
+}
+
+.signup-grid-cell--dark:hover {
+  background: #e8eef4;
+  box-shadow: 0 4px 20px rgba(3, 105, 161, 0.12);
+}
+
+/* Cursor-following glow overlay */
+.signup-cursor-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    circle 280px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(14, 165, 233, 0.07) 0%,
+    transparent 55%
+  );
+  transition: background-position 0.15s ease-out;
+}
+
+/* Card above grid */
+.signup-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg), 0 1px 0 rgba(255, 255, 255, 0.95) inset;
+  padding: 2.25rem;
+  border: 1px solid rgba(221, 228, 236, 0.9);
+  animation: cardSlideUp 0.5s var(--ease-out) both;
+}
+
+.signup-logo-wrap {
+  display: inline-block;
+  padding: 10px;
+  margin-bottom: 1.25rem;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.signup-logo {
+  display: block;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  transition: transform var(--transition);
+}
+
+.signup-logo-wrap:hover .signup-logo {
+  transform: scale(1.05);
+}
+
+.signup-card h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.signup-sub {
+  margin: 0 0 1.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.signup-card form label {
+  display: block;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.signup-card input {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-family: var(--font-sans);
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.signup-card input::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.signup-card input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+}
+
+.req {
+  color: var(--color-error);
+}
+
+.signup-error {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  animation: cardSlideUp 0.3s var(--ease-out);
+}
+
+.signup-card button {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(180deg, var(--color-primary) 0%, #025a8a 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(3, 105, 161, 0.3);
+  transition: background var(--transition), transform 0.15s ease, box-shadow var(--transition);
+}
+
+.signup-card button:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--color-primary-hover) 0%, var(--color-primary) 100%);
+  box-shadow: 0 4px 14px rgba(3, 105, 161, 0.4);
+  transform: translateY(-1px);
+}
+
+.signup-card button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.signup-card button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.signup-footer {
+  margin: 1.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.signup-footer a {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.signup-footer a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getToken, logout } from '../App'
-import { listCandidates, addCandidate, getReport, candidateAction, submitResumeFromPlatform, extractResumeDetails, extractResumeFromFile, apiBase } from '../api'
+import { listCandidates, addCandidate, getReport, candidateAction, extractResumeDetails, extractResumeFromFile, apiBase } from '../api'
 import './Dashboard.css'
 
 function formatDate(d) {
@@ -39,14 +39,6 @@ export default function Dashboard() {
   const [formUploadedFile, setFormUploadedFile] = useState(null) // selected file for upload
   const [formExtractSuccess, setFormExtractSuccess] = useState(false) // show "Details extracted" after parse
   const [formSuccess, setFormSuccess] = useState('')
-
-  // From platform (ATS shortlist >= 85)
-  const [showPlatformForm, setShowPlatformForm] = useState(false)
-  const [platformResumeText, setPlatformResumeText] = useState('')
-  const [platformJobRole, setPlatformJobRole] = useState('')
-  const [platformName, setPlatformName] = useState('')
-  const [platformSubmitting, setPlatformSubmitting] = useState(false)
-  const [platformResult, setPlatformResult] = useState(null)
 
   const loadCandidates = async () => {
     setLoading(true)
@@ -218,39 +210,17 @@ export default function Dashboard() {
     }
   }
 
-  async function handlePlatformSubmit(e) {
-    e.preventDefault()
-    setPlatformSubmitting(true)
-    setPlatformResult(null)
-    setError('')
-    try {
-      const res = await submitResumeFromPlatform(token, {
-        resume_text: platformResumeText,
-        job_role: platformJobRole,
-        full_name: platformName || undefined,
-      })
-      setPlatformResult(res)
-      if (res.shortlisted) {
-        setPlatformResumeText('')
-        setPlatformJobRole('')
-        setPlatformName('')
-        loadCandidates()
-      }
-    } catch (err) {
-      setError(err.message || 'Platform submit failed')
-    } finally {
-      setPlatformSubmitting(false)
-    }
-  }
-
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>Resumes &amp; Candidates</h1>
-        <div className="header-actions">
-          <button type="button" className="btn btn-outline" onClick={() => setShowPlatformForm(!showPlatformForm)}>
-            {showPlatformForm ? 'Cancel' : 'From platform'}
-          </button>
+      <div className="dashboard-header-bar">
+        <header className="dashboard-header">
+          <h1>
+            <span className="header-brand-wrap">
+            <img src="/agent.png" alt="Interview Admin" className="header-brand" />
+          </span>
+            Resumes &amp; Candidates
+          </h1>
+          <div className="header-actions">
           <button type="button" className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
             {showForm ? 'Cancel' : '+ Add resume'}
           </button>
@@ -258,56 +228,10 @@ export default function Dashboard() {
             Log out
           </button>
         </div>
-      </header>
+        </header>
+      </div>
 
-      {showPlatformForm && (
-        <section className="add-resume-card platform-card">
-          <h2>Resume from job platform (ATS ≥ 85 shortlisted)</h2>
-          <p className="card-hint">Paste resume text. Email is extracted; if ATS score ≥ 85, candidate is shortlisted and invite email is sent.</p>
-          <form onSubmit={handlePlatformSubmit}>
-            <label>
-              Job role <span className="req">*</span>
-              <input
-                type="text"
-                value={platformJobRole}
-                onChange={(e) => setPlatformJobRole(e.target.value)}
-                placeholder="Software Engineer"
-                required
-              />
-            </label>
-            <label>
-              Full name (optional)
-              <input
-                type="text"
-                value={platformName}
-                onChange={(e) => setPlatformName(e.target.value)}
-                placeholder="John Doe"
-              />
-            </label>
-            <label>
-              Resume text <span className="req">*</span>
-              <textarea
-                value={platformResumeText}
-                onChange={(e) => setPlatformResumeText(e.target.value)}
-                placeholder="Paste full resume. Include email in text."
-                rows={6}
-                required
-              />
-            </label>
-            {platformResult && (
-              <div className={`platform-result ${platformResult.shortlisted ? 'shortlisted' : 'not-shortlisted'}`}>
-                <p><strong>ATS score:</strong> {platformResult.ats_score}</p>
-                <p>{platformResult.message}</p>
-                {platformResult.email && <p>Email extracted: {platformResult.email}</p>}
-              </div>
-            )}
-            <button type="submit" className="btn btn-primary" disabled={platformSubmitting}>
-              {platformSubmitting ? 'Submitting…' : 'Submit from platform'}
-            </button>
-          </form>
-        </section>
-      )}
-
+      <main className="dashboard-main">
       {showForm && (
         <section className="add-resume-card">
           <h2>Add resume</h2>
@@ -709,6 +633,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      </main>
     </div>
   )
 }

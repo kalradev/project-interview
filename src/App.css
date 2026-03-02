@@ -1,4 +1,4 @@
-/* Interview: disable text selection to reduce copy-paste cheating (answer input stays selectable) */
+/* Interview: disable text selection (answer input stays selectable) */
 .interview-container {
   user-select: none;
   -webkit-user-select: none;
@@ -14,8 +14,9 @@
 .interview-page {
   max-width: 640px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 2rem 1.25rem;
   min-height: 100vh;
+  animation: iaSlideUp 0.4s var(--ia-ease-out) both;
 }
 
 .interview-header {
@@ -24,25 +25,30 @@
 
 .interview-header h1 {
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 0.5rem 0;
+  color: var(--ia-text);
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
-  color: #94a3b8;
-  font-size: 0.9rem;
+  color: var(--ia-text-subtle);
+  font-size: 0.9375rem;
   margin: 0;
+  line-height: 1.45;
 }
 
 .interview-main {
-  background: #1e293b;
-  border-radius: 12px;
+  background: var(--ia-bg-card);
+  border-radius: var(--ia-radius-lg);
   padding: 2rem;
-  border: 1px solid #334155;
+  border: 1px solid var(--ia-border);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), var(--ia-shadow-glow);
+  animation: iaSlideUp 0.45s var(--ia-ease-out) 0.08s both;
 }
 
 .interview-placeholder {
-  color: #94a3b8;
+  color: var(--ia-text-subtle);
   text-align: center;
   padding: 2rem;
 }
@@ -53,45 +59,51 @@
 
 .interview-placeholder p:last-child {
   margin-bottom: 0;
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
 }
 
 /* Warning modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(12, 18, 34, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 1.25rem;
+  animation: iaFadeIn 0.2s var(--ia-ease-out);
 }
 
 .modal {
-  background: #1e293b;
-  border-radius: 12px;
-  padding: 1.5rem 2rem;
+  background: var(--ia-bg-card);
+  border-radius: var(--ia-radius-lg);
+  padding: 1.75rem 2rem;
   max-width: 400px;
   width: 100%;
-  border: 1px solid #334155;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--ia-border);
+  box-shadow: var(--ia-shadow), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  animation: iaSlideUp 0.3s var(--ia-ease-out) both;
 }
 
 .modal-title {
   margin: 0 0 1rem 0;
   font-size: 1.25rem;
-  color: #fbbf24;
+  font-weight: 700;
+  color: var(--ia-warning);
 }
 
 .modal-text {
   margin: 0 0 1.5rem 0;
-  color: #e2e8f0;
-  line-height: 1.5;
+  color: var(--ia-text-muted);
+  line-height: 1.55;
+  font-size: 0.9375rem;
 }
 
 .modal-text strong {
-  color: #f87171;
+  color: var(--ia-error);
 }
 
 .modal-text-highlight {
@@ -99,21 +111,30 @@
 }
 
 .btn {
-  padding: 0.6rem 1.25rem;
-  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--ia-radius-md);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: var(--ia-font);
   cursor: pointer;
   border: none;
+  transition: background var(--ia-transition), transform 0.15s ease, box-shadow var(--ia-transition);
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: linear-gradient(180deg, var(--ia-primary) 0%, var(--ia-primary-hover) 100%);
   color: white;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35);
 }
 
 .btn-primary:hover {
-  background: #2563eb;
+  background: linear-gradient(180deg, var(--ia-accent) 0%, var(--ia-primary) 100%);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 /* Disqualified screen */
@@ -122,19 +143,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  background: #0f172a;
+  padding: 1.5rem;
+  background: var(--ia-bg);
 }
 
 .disqualified-card {
-  background: #1e293b;
-  border-radius: 12px;
+  background: var(--ia-bg-card);
+  border-radius: var(--ia-radius-lg);
   padding: 2.5rem;
   max-width: 420px;
   width: 100%;
   text-align: center;
-  border: 1px solid #334155;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--ia-border);
+  box-shadow: var(--ia-shadow), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  animation: iaSlideUp 0.4s var(--ia-ease-out) both;
 }
 
 .disqualified-icon {
@@ -146,18 +168,19 @@
 .disqualified-card h1 {
   margin: 0 0 1rem 0;
   font-size: 1.5rem;
-  color: #f87171;
+  font-weight: 700;
+  color: var(--ia-error);
 }
 
 .disqualified-card p {
   margin: 0 0 0.75rem 0;
-  color: #e2e8f0;
-  line-height: 1.5;
+  color: var(--ia-text-muted);
+  line-height: 1.55;
 }
 
 .disqualified-note {
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--ia-text-subtle);
   margin-bottom: 1.5rem;
 }
 

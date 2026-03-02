@@ -9,13 +9,47 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_async_session
 from app.models.user import User, UserRole
-from app.schemas.auth import Token, UserCreate, UserResponse, LoginRequest
+from app.schemas.auth import Token, UserCreate, UserResponse, LoginRequest, SignupRequest
 from app.auth.jwt import create_access_token
 from app.auth.dependencies import require_roles
 from app.auth.password import hash_password, verify_password
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+@router.post("/signup", response_model=Token)
+async def signup(
+    payload: SignupRequest,
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Public signup: only allowed when no users exist (first admin)."""
+    result = await db.execute(select(User))
+    existing = result.scalars().first()
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is closed. An administrator already exists.",
+        )
+    result = await db.execute(select(User).where(User.email == payload.email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+    user = User(
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        full_name=payload.full_name,
+        role=UserRole.ADMIN,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    settings = get_settings()
+    access_token = create_access_token(subject=user.id, role=user.role)
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=settings.access_token_expire_minutes * 60,
+    )
 
 
 @router.post("/register", response_model=UserResponse)

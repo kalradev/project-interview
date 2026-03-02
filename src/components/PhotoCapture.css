@@ -4,42 +4,50 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: #0f172a;
+  background: var(--ia-bg);
 }
 
 .photo-capture-card {
-  background: #1e293b;
-  border-radius: 12px;
-  padding: 2rem;
+  background: var(--ia-bg-card);
+  border-radius: var(--ia-radius-lg);
+  padding: 2.25rem;
   max-width: 480px;
   width: 100%;
-  border: 1px solid #334155;
+  border: 1px solid var(--ia-border);
   text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  animation: iaSlideUp 0.45s var(--ia-ease-out) both;
 }
 
 .photo-capture-card h2 {
   margin: 0 0 0.5rem 0;
-  color: #e2e8f0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ia-text);
+  letter-spacing: -0.02em;
 }
 
 .photo-capture-desc {
-  color: #94a3b8;
-  font-size: 0.9rem;
+  color: var(--ia-text-subtle);
+  font-size: 0.9375rem;
   margin: 0 0 1rem 0;
+  line-height: 1.45;
 }
 
 .photo-capture-error {
-  color: #f87171;
+  color: var(--ia-error);
   font-size: 0.875rem;
+  font-weight: 500;
   margin: 0 0 1rem 0;
 }
 
 .photo-capture-video {
   width: 100%;
   max-width: 320px;
-  border-radius: 8px;
-  background: #0f172a;
+  border-radius: var(--ia-radius-md);
+  background: var(--ia-bg);
   margin-bottom: 1rem;
+  border: 1px solid var(--ia-border);
 }
 
 .photo-capture-actions {

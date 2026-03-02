@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import DateTime, Enum, String
+from sqlalchemy import DateTime, Enum, String, TypeDecorator
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +17,31 @@ class UserRole(str, PyEnum):
     ADMIN = "admin"
     INTERVIEWER = "interviewer"
     CANDIDATE = "candidate"
+
+
+# Map DB values (uppercase or lowercase) to UserRole so old rows with 'ADMIN' still load
+_ROLE_MAP = {v.value: v for v in UserRole} | {v.name: v for v in UserRole} | {v.value.upper(): v for v in UserRole}
+
+
+class _UserRoleType(TypeDecorator):
+    """Stores role as string; accepts both 'admin' and 'ADMIN' from DB (avoids LookupError)."""
+    impl = String(32)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, UserRole):
+            return value.value
+        return value if isinstance(value, str) else str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, UserRole):
+            return value
+        raw = (value.strip() if isinstance(value, str) else str(value).strip()).upper()
+        return _ROLE_MAP.get(raw) or _ROLE_MAP.get(value.strip().lower() if isinstance(value, str) else "") or UserRole.CANDIDATE
 
 
 class User(Base):
@@ -33,7 +58,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=True)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, values_callable=lambda x: [e.value for e in x]),
+        _UserRoleType(),
         default=UserRole.CANDIDATE,
         nullable=False,
     )

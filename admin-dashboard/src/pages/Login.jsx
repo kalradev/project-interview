@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { login } from '../api'
 import { setToken } from '../App'
 import './Login.css'
@@ -29,6 +29,9 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
+        <div className="login-logo-wrap">
+          <img src="/agent.png" alt="Interview Admin" className="login-logo" />
+        </div>
         <h1>Interview Admin</h1>
         <p className="login-sub">Sign in to manage candidates and resumes</p>
         <form onSubmit={handleSubmit}>
@@ -59,6 +62,9 @@ export default function Login() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+        <p className="login-footer">
+          Don&apos;t have an account? <Link to="/signup">Sign up</Link>
+        </p>
       </div>
     </div>
   )

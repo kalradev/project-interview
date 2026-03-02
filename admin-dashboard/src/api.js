@@ -24,6 +24,20 @@ export async function login(email, password) {
   return res.json()
 }
 
+/** Public signup (only works when no users exist – creates first admin). */
+export async function signup(email, password, fullName = '') {
+  const res = await fetch(`${BASE}/api/v1/auth/signup`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ email, password, full_name: fullName || undefined }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || 'Sign up failed')
+  }
+  return res.json()
+}
+
 export async function listCandidates(token, params = {}) {
   const q = new URLSearchParams(params).toString()
   const res = await fetch(`${BASE}/api/v1/admin/candidates${q ? `?${q}` : ''}`, {

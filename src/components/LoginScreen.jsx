@@ -47,6 +47,9 @@ export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
   return (
     <div className="login-screen">
       <div className="login-card">
+        <div className="login-logo-wrap">
+          <img src="/agent.png" alt="Interview Agent" className="login-logo" />
+        </div>
         <h1>Interview Agent</h1>
         <p className="login-desc">Log in with the email and password sent to you for the interview.</p>
         <form onSubmit={handleLogin}>

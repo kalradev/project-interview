@@ -25,6 +25,14 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class SignupRequest(BaseModel):
+    """Schema for public signup (first user only)."""
+
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+
+
 class UserResponse(BaseModel):
     """Schema for user in responses."""
 
