@@ -240,21 +240,40 @@ def _llm_result_to_extract_dict(data: dict[str, Any], original_text: str) -> dic
         experience_lines.append(" | ".join(parts))
     experience = experience_lines[:25]
 
-    project_lines = []
+    def _looks_like_continuation(n: str) -> bool:
+        """True if this looks like a bullet/continuation line, not a new project name."""
+        if not n:
+            return True
+        s = n.strip()
+        if len(s) > 120:
+            return True
+        if s.startswith("•") or s.startswith("–") or s.startswith("- ") or s.startswith("* "):
+            return True
+        if s and s[0].islower():
+            return True
+        if re.match(r"^\d+\)\s*\.?", s) and not re.match(r"^\d+\)\s*[A-Z][a-z]+(\s+[A-Z][a-z]+)*\s*$", s):
+            return True
+        return False
+
+    project_lines: list[str] = []
     for item in projects_arr:
         if not isinstance(item, dict):
             continue
         name = _strip_section_marker((item.get("name") or "").strip())
         desc = _strip_section_marker((item.get("description") or "").strip())
         techs = item.get("technologies")
-        if not name:
-            continue
-        line = name
+        line = name or ""
         if desc:
-            line += ": " + desc
+            line += (": " if line else "") + desc
         if isinstance(techs, list) and techs:
-            line += " [" + ", ".join(_strip_section_marker(str(t).strip()) for t in techs if t) + "]"
-        project_lines.append(line)
+            tech_str = ", ".join(_strip_section_marker(str(t).strip()) for t in techs if t)
+            line += (" [" + tech_str + "]") if line else tech_str
+        if not line.strip():
+            continue
+        if project_lines and _looks_like_continuation(name):
+            project_lines[-1] += "\n" + line
+        else:
+            project_lines.append(line)
     projects = project_lines[:20]
 
     certificates = [_strip_section_marker(str(c).strip()) for c in certifications_arr if c and str(c).strip()][:20]

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getToken, logout } from '../App'
-import { listCandidates, addCandidate, getReport, candidateAction, submitResumeFromPlatform, extractResumeDetails, extractResumeFromFile, apiBase } from '../api'
+import { listCandidates, addCandidate, getReport, candidateAction, deleteCandidate, submitResumeFromPlatform, extractResumeDetails, extractResumeFromFile, apiBase } from '../api'
 import './Dashboard.css'
 
 function formatDate(d) {
@@ -28,14 +28,15 @@ export default function Dashboard() {
   const [formLinksLinkedIn, setFormLinksLinkedIn] = useState('')
   const [formLinksPortfolio, setFormLinksPortfolio] = useState('')
   const [formLinksOther, setFormLinksOther] = useState('')
-  const [formProjects, setFormProjects] = useState('') // Project 1, 2, 3... one per line
-  const [formCertificates, setFormCertificates] = useState('')
+  const [formProjectsList, setFormProjectsList] = useState(['']) // one box per project
+  const [formCertificatesList, setFormCertificatesList] = useState(['']) // one box per certificate
   const [formExperience, setFormExperience] = useState('')
   const [sendInvite, setSendInvite] = useState(true) // Toggle: admin decides to take interview
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formExtractLoading, setFormExtractLoading] = useState(false)
   const [formExtractFileLoading, setFormExtractFileLoading] = useState(false)
   const [formUploadedFile, setFormUploadedFile] = useState(null) // selected file for upload
+  const [formClearKey, setFormClearKey] = useState(0) // increment to reset file input on Clear
   const [formExtractSuccess, setFormExtractSuccess] = useState(false) // show "Details extracted" after parse
   const [formSuccess, setFormSuccess] = useState('')
 
@@ -74,9 +75,20 @@ export default function Dashboard() {
     setFormLinksLinkedIn('')
     setFormLinksPortfolio('')
     setFormLinksOther('')
-    setFormProjects('')
-    setFormCertificates('')
+    setFormProjectsList([''])
+    setFormCertificatesList([''])
     setFormExperience('')
+  }
+
+  function clearForm() {
+    clearExtractedFormFields()
+    setFormResumeText('')
+    setFormResumeUrl('')
+    setFormUploadedFile(null)
+    setFormClearKey((k) => k + 1)
+    setFormExtractSuccess(false)
+    setFormSuccess('')
+    setError('')
   }
 
   function fillFormFromExtract(data) {
@@ -88,8 +100,16 @@ export default function Dashboard() {
     setFormLinksLinkedIn(Array.isArray(data.links_linkedin) ? data.links_linkedin.join('\n') : (data.links_linkedin ?? ''))
     setFormLinksPortfolio(Array.isArray(data.links_portfolio) ? data.links_portfolio.join('\n') : (data.links_portfolio ?? ''))
     setFormLinksOther(Array.isArray(data.links_other) ? data.links_other.join('\n') : (data.links_other ?? ''))
-    setFormProjects(Array.isArray(data.projects) ? data.projects.join('\n') : (data.projects ?? ''))
-    setFormCertificates(Array.isArray(data.certificates) ? data.certificates.join('\n') : (data.certificates ?? ''))
+    setFormProjectsList(
+      (Array.isArray(data.projects) ? data.projects : (data.projects ?? '').toString().split('\n').map((s) => s.trim()).filter(Boolean)).length
+        ? (Array.isArray(data.projects) ? data.projects : (data.projects ?? '').toString().split('\n').map((s) => s.trim()))
+        : ['']
+    )
+    setFormCertificatesList(
+      (Array.isArray(data.certificates) ? data.certificates : (data.certificates ?? '').toString().split('\n').map((s) => s.trim()).filter(Boolean)).length
+        ? (Array.isArray(data.certificates) ? data.certificates : (data.certificates ?? '').toString().split('\n').map((s) => s.trim()))
+        : ['']
+    )
     setFormExperience(Array.isArray(data.experience) ? data.experience.join('\n') : (data.experience ?? ''))
     if (data.resume_text) setFormResumeText(data.resume_text)
     setFormExtractSuccess(true)
@@ -157,8 +177,8 @@ export default function Dashboard() {
           ]
           return urls.length ? urls : undefined
         })(),
-        projects: formProjects ? formProjects.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
-        certificates: formCertificates ? formCertificates.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
+        projects: formProjectsList.filter((s) => s.trim()).length ? formProjectsList.map((s) => s.trim()).filter(Boolean) : undefined,
+        certificates: formCertificatesList.filter((s) => s.trim()).length ? formCertificatesList.map((s) => s.trim()).filter(Boolean) : undefined,
         experience: formExperience ? formExperience.split('\n').map((s) => s.trim()).filter(Boolean) : undefined,
         source: 'manual',
         send_email: sendInvite,
@@ -180,8 +200,8 @@ export default function Dashboard() {
       setFormLinksLinkedIn('')
       setFormLinksPortfolio('')
       setFormLinksOther('')
-      setFormProjects('')
-      setFormCertificates('')
+      setFormProjectsList([''])
+      setFormCertificatesList([''])
       setFormExperience('')
       setFormUploadedFile(null)
       setFormExtractSuccess(false)
@@ -201,6 +221,20 @@ export default function Dashboard() {
       setReport(data)
     } catch {
       setReport({ none: true })
+    }
+  }
+
+  async function handleDelete(candidateId, candidateName) {
+    if (!window.confirm(`Delete candidate "${candidateName || 'this candidate'}"? This will remove their profile, user account, and all interview sessions.`)) {
+      return
+    }
+    setError('')
+    try {
+      await deleteCandidate(token, candidateId)
+      if (report && report.candidate_id === candidateId) setReport(null)
+      loadCandidates()
+    } catch (err) {
+      setError(err.message || 'Failed to delete candidate')
     }
   }
 
@@ -327,6 +361,7 @@ export default function Dashboard() {
               <label className="upload-label">
                 Upload resume (PDF or DOCX)
                 <input
+                  key={`file-${formClearKey}`}
                   type="file"
                   accept=".pdf,.docx"
                   onChange={(e) => setFormUploadedFile(e.target.files?.[0] ?? null)}
@@ -449,25 +484,83 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <label>
-              Projects — one per line (Project 1, Project 2, …)
-              <textarea
-                value={formProjects}
-                onChange={(e) => setFormProjects(e.target.value)}
-                placeholder="Project name or short description per line"
-                rows={4}
-              />
-            </label>
+            <div className="list-fields">
+              <span className="list-fields-label">Projects — one box per project with all its details (name, description, tech stack)</span>
+              <div className="list-fields-items">
+                {formProjectsList.map((text, idx) => (
+                  <div key={idx} className="list-field-box">
+                    <label className="list-field-box-label">Project {idx + 1}</label>
+                    <textarea
+                      value={text}
+                      onChange={(e) => {
+                        const next = [...formProjectsList]
+                        next[idx] = e.target.value
+                        setFormProjectsList(next)
+                      }}
+                      placeholder="Project name, description, bullets, tech stack — all details for this project"
+                      rows={5}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm list-field-remove"
+                      onClick={() => {
+                        const next = formProjectsList.filter((_, i) => i !== idx)
+                        setFormProjectsList(next.length ? next : [''])
+                      }}
+                      aria-label="Remove project"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm list-field-add"
+                onClick={() => setFormProjectsList([...formProjectsList, ''])}
+              >
+                + Add project
+              </button>
+            </div>
 
-            <label>
-              Certificates — one per line
-              <textarea
-                value={formCertificates}
-                onChange={(e) => setFormCertificates(e.target.value)}
-                placeholder="e.g. MongoDB – ICT Academy"
-                rows={3}
-              />
-            </label>
+            <div className="list-fields">
+              <span className="list-fields-label">Certificates — one box per certificate</span>
+              <div className="list-fields-items">
+                {formCertificatesList.map((text, idx) => (
+                  <div key={idx} className="list-field-box">
+                    <label className="list-field-box-label">Certificate {idx + 1}</label>
+                    <input
+                      type="text"
+                      value={text}
+                      onChange={(e) => {
+                        const next = [...formCertificatesList]
+                        next[idx] = e.target.value
+                        setFormCertificatesList(next)
+                      }}
+                      placeholder="e.g. MongoDB – ICT Academy"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm list-field-remove"
+                      onClick={() => {
+                        const next = formCertificatesList.filter((_, i) => i !== idx)
+                        setFormCertificatesList(next.length ? next : [''])
+                      }}
+                      aria-label="Remove certificate"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm list-field-add"
+                onClick={() => setFormCertificatesList([...formCertificatesList, ''])}
+              >
+                + Add certificate
+              </button>
+            </div>
 
             <label>
               Experience — one entry per line
@@ -511,9 +604,14 @@ export default function Dashboard() {
 
             {formSuccess && <p className="form-success">{formSuccess}</p>}
             {error && <p className="form-error">{error}</p>}
-            <button type="submit" className="btn btn-primary" disabled={formSubmitting}>
-              {formSubmitting ? 'Adding…' : 'Add candidate'}
-            </button>
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={formSubmitting}>
+                {formSubmitting ? 'Adding…' : 'Add candidate'}
+              </button>
+              <button type="button" className="btn btn-outline" onClick={clearForm}>
+                Clear
+              </button>
+            </div>
           </form>
         </section>
       )}
@@ -591,6 +689,9 @@ export default function Dashboard() {
                             </button>
                           </>
                         )}
+                        <button type="button" className="btn-action btn-action-delete" onClick={() => handleDelete(c.id, c.full_name)} title="Delete candidate">
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>

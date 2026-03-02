@@ -26,6 +26,7 @@ from app.schemas.candidate import (
 )
 from app.services.candidate_service import (
     add_candidate,
+    delete_candidate,
     get_candidates,
     update_candidate_status,
 )
@@ -209,3 +210,16 @@ async def candidate_action(
     user_result = await db.execute(select(User).where(User.id == profile.user_id))
     user = user_result.scalar_one()
     return _candidate_to_response(profile, user.email, user.full_name)
+
+
+@router.delete("/{candidate_id}")
+async def delete_candidate_route(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_async_session),
+    _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
+):
+    """Delete a candidate (profile, user, and all their interview sessions)."""
+    deleted = await delete_candidate(db, candidate_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+    return {"ok": True}

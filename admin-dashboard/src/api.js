@@ -67,6 +67,18 @@ export async function candidateAction(token, candidateId, status) {
   return res.json()
 }
 
+export async function deleteCandidate(token, candidateId) {
+  const res = await fetch(`${BASE}/api/v1/admin/candidates/${candidateId}`, {
+    method: 'DELETE',
+    headers: headers(token),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || 'Delete failed')
+  }
+  return res.json()
+}
+
 /** Extract details from resume text for form pre-fill. */
 export async function extractResumeDetails(token, resumeText) {
   const res = await fetch(`${BASE}/api/v1/admin/resumes/extract`, {

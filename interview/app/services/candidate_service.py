@@ -5,10 +5,12 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.candidate_profile import CandidateProfile, CandidateStatus
+from app.models.interview_session import InterviewSession
+from app.models.user import User
 from app.models.user import User, UserRole
 from app.services.email_service import send_invite_email
 from app.config import get_settings
@@ -131,3 +133,22 @@ async def update_candidate_status(
     await db.flush()
     await db.refresh(profile)
     return profile
+
+
+async def delete_candidate(db: AsyncSession, candidate_id: UUID) -> bool:
+    """
+    Delete a candidate: remove their sessions, profile, and user.
+    Returns True if deleted, False if candidate not found.
+    """
+    result = await db.execute(select(CandidateProfile).where(CandidateProfile.id == candidate_id))
+    profile = result.scalar_one_or_none()
+    if not profile:
+        return False
+    user_id = profile.user_id
+    await db.execute(delete(InterviewSession).where(InterviewSession.candidate_id == user_id))
+    await db.delete(profile)
+    user = await db.get(User, user_id)
+    if user:
+        await db.delete(user)
+    await db.flush()
+    return True
