@@ -8,4 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   enterInterviewMode: () => {
     ipcRenderer.send('enter-interview-mode')
   },
+  requestCloseInterview: () => {
+    ipcRenderer.send('request-close-interview')
+  },
 })

@@ -16,7 +16,10 @@ function WarningModal({ onDismiss }) {
       <div className="modal">
         <h2 id="warning-title" className="modal-title">⚠️ Warning</h2>
         <p className="modal-text">
-          You left the interview screen. Do not leave again or you will be <strong>disqualified</strong>.
+          You attempted to leave the interview (e.g. Alt+F4 or switching away). Do not do this again.
+        </p>
+        <p className="modal-text modal-text-highlight">
+          <strong>Next time you will be disqualified.</strong>
         </p>
         <button type="button" className="btn btn-primary" onClick={onDismiss}>
           I understand
@@ -27,13 +30,23 @@ function WarningModal({ onDismiss }) {
 }
 
 function DisqualifiedScreen() {
+  const handleClose = () => {
+    if (window.electronAPI?.requestCloseInterview) {
+      window.electronAPI.requestCloseInterview()
+    }
+  }
   return (
     <div className="disqualified-screen">
       <div className="disqualified-card">
         <span className="disqualified-icon">🚫</span>
         <h1>Disqualified</h1>
-        <p>You have been disqualified for leaving the interview screen.</p>
+        <p>You have been disqualified for leaving the interview screen a second time.</p>
         <p className="disqualified-note">Please contact support if you believe this was an error.</p>
+        {window.electronAPI?.requestCloseInterview && (
+          <button type="button" className="btn btn-primary disqualified-close-btn" onClick={handleClose}>
+            Close interview
+          </button>
+        )}
       </div>
     </div>
   )

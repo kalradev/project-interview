@@ -2,8 +2,10 @@ const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electro
 const path = require('path')
 
 let mainWindow = null
+let allowClose = false // true when user legitimately ends interview and requests close
 
 function createWindow() {
+  allowClose = false
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
 
   mainWindow = new BrowserWindow({
@@ -39,8 +41,11 @@ function createWindow() {
   })
 
   mainWindow.on('close', (event) => {
+    if (allowClose) {
+      return // allow window to close (user chose "End interview" -> Close)
+    }
     event.preventDefault()
-    mainWindow.webContents.send('app-blur')
+    mainWindow.webContents.send('app-blur') // Alt+F4 or close: first time = warning, second = disqualify
   })
 
   mainWindow.on('blur', () => {
@@ -71,6 +76,13 @@ app.whenReady().then(() => {
       mainWindow.setFullScreen(true)
       mainWindow.setKiosk(true)
       mainWindow.setAlwaysOnTop(true, 'screen-saver')
+    }
+  })
+
+  ipcMain.on('request-close-interview', () => {
+    allowClose = true
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close()
     }
   })
 

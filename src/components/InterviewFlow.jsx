@@ -192,10 +192,20 @@ export function InterviewFlow({ onEnd }) {
   }
 
   if (ended) {
+    const handleClose = () => {
+      if (window.electronAPI?.requestCloseInterview) {
+        window.electronAPI.requestCloseInterview()
+      }
+    }
     return (
       <div className="interview-flow-ended">
         <h2>Interview ended</h2>
         <p>Thank you. Your responses have been submitted.</p>
+        {window.electronAPI?.requestCloseInterview && (
+          <button type="button" className="btn btn-primary interview-ended-close-btn" onClick={handleClose}>
+            Close interview
+          </button>
+        )}
       </div>
     )
   }

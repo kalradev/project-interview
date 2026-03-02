@@ -121,5 +121,9 @@
 
 .interview-flow-ended p {
   color: #94a3b8;
-  margin: 0;
+  margin: 0 0 1rem 0;
+}
+
+.interview-ended-close-btn {
+  margin-top: 0.5rem;
 }
