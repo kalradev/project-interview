@@ -30,6 +30,16 @@ LOCATION_HINTS = re.compile(
     r"\d{6}|^\d+\s|street|st\.|avenue|ave\.|rajasthan|maharashtra|delhi|bangalore|pincode|pin\s|,\s*\d{5}",
     re.I,
 )
+# Education hints: reject lines that are clearly education (so they are not used as job_role)
+EDUCATION_HINTS = re.compile(
+    r"\b(college|university|institute|institution|school|academy|board)\b|"
+    r"\b(cgpa|gpa|percentage|%|percent)\b|"
+    r"\b(class\s+x\b|class\s+xii\b|secondary|senior\s+secondary)\b|"
+    r"\b(b\.?\s*tech|b\.?\s*e\.?|m\.?\s*tech|m\.?\s*e\.?|b\.?\s*sc|m\.?\s*sc|b\.?\s*com|mba|bca|mca)\b|"
+    r"\b(202[0-9]|201[0-9])\s*[-–]\s*(202[0-9]|201[0-9])\b|"
+    r"\b(cbse|icse|state\s+board)\b",
+    re.I,
+)
 
 # Tech/skill keywords to detect from resume (lowercase)
 TECH_SKILLS = [
@@ -48,10 +58,25 @@ RESUME_KEYWORDS = [
 ]
 
 
+def is_education_line(line: str) -> bool:
+    """True if the line looks like education (college, GPA, degree, etc.), not a job title."""
+    return bool(line and line.strip() and EDUCATION_HINTS.search(line))
+
+
 def extract_email_from_resume(resume_text: str) -> Optional[str]:
-    """Extract first valid-looking email from resume text."""
+    """Extract first valid-looking email from resume text (including after 'email:' or from mailto:)."""
     if not resume_text or not isinstance(resume_text, str):
         return None
+    # mailto: link
+    mailto = re.search(r"mailto:\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", resume_text, re.I)
+    if mailto:
+        return mailto.group(1).strip().lower()
+    # "Email:" or "E-mail:" or "Mail:" on same line
+    for prefix in (r"e-?mail\s*[:\-]\s*", r"mail\s*[:\-]\s*", r"contact\s*[:\-]\s*"):
+        m = re.search(prefix + r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", resume_text, re.I)
+        if m:
+            return m.group(1).strip().lower()
+    # any email in text
     pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
     match = re.search(pattern, resume_text)
     return match.group(0).strip().lower() if match else None
@@ -59,7 +84,7 @@ def extract_email_from_resume(resume_text: str) -> Optional[str]:
 
 def _valid_link(u: str) -> bool:
     """Reject placeholder or incomplete links."""
-    if not u or len(u) < 12:
+    if not u or len(u) < 10:
         return False
     if u.rstrip("/").endswith("/_") or "/_ " in u:
         return False
@@ -124,7 +149,11 @@ def _extract_links_from_links_section(text: str) -> list[str]:
         line = lines[i]
         lower = line.lower()
         if not in_links:
-            if lower in ("links", "link", "online presence", "profiles") or lower.startswith("links:") or lower.startswith("link:"):
+            if (
+                lower in ("links", "link", "online presence", "profiles", "social links", "profile links", "online profiles")
+                or lower.startswith("links:") or lower.startswith("link:")
+                or "[section:" in lower and "link" in lower
+            ):
                 in_links = True
                 i += 1
                 continue
@@ -140,7 +169,10 @@ def _extract_links_from_links_section(text: str) -> list[str]:
             u = line if line.lower().startswith("http") else "https://" + line
             if _valid_link(u):
                 out.append(u)
-        elif lower in ("github", "git hub", "linkedin", "linked in", "leetcode", "portfolio", "website", "twitter", "medium", "gfg", "geeksforgeeks", "gfc", "codechef", "codeforces", "hackerrank"):
+        elif (
+            lower in ("github", "git hub", "linkedin", "linked in", "leetcode", "portfolio", "website", "twitter", "medium", "gfg", "geeksforgeeks", "gfc", "codechef", "codeforces", "hackerrank")
+            or (len(line) <= 30 and ("github" in lower or "linkedin" in lower or "linked in" in lower or "leetcode" in lower or "portfolio" in lower or "hackerrank" in lower or "codechef" in lower or "codeforces" in lower or "geeksforgeeks" in lower))
+        ):
             next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
             if next_line.startswith("http") and _valid_link(next_line.rstrip(".,;:)")):
                 out.append(next_line.rstrip(".,;:)"))
@@ -177,12 +209,25 @@ def _extract_all_urls(text: str) -> list[str]:
             seen.add(key)
             out.append(u)
 
-    # 1) Full URLs: http:// or https://
+    # 1) Full URLs: http:// or https:// (allow trailing punctuation)
     for m in re.finditer(r"https?://[^\s<>\"')\]\]]+", text, re.IGNORECASE):
         u = m.group(0).rstrip(".,;:)\\]")
         if len(u) > 10 and len(u) < 500 and u not in seen and _valid_link(u):
             seen.add(u)
             out.append(u)
+
+    # 1b) Same-line "GitHub https://...", "LinkedIn https://..." (label then URL)
+    for pattern, _ in [
+        (r"(?:github|git\s*hub)\s+(https?://[^\s]+)", None),
+        (r"(?:linkedin|linked\s*in)\s+(https?://[^\s]+)", None),
+        (r"(?:portfolio|website)\s+(https?://[^\s]+)", None),
+        (r"(?:leetcode|hackerrank|codechef|codeforces|geeksforgeeks)\s+(https?://[^\s]+)", None),
+    ]:
+        for m in re.finditer(pattern, text, re.IGNORECASE):
+            u = m.group(1).rstrip(".,;:)\\]")
+            if len(u) > 10 and len(u) < 500 and u not in seen and _valid_link(u):
+                seen.add(u)
+                out.append(u)
 
     # 2) Bare domains common in resumes (add https://)
     bare_patterns = [
@@ -308,6 +353,142 @@ def _extract_section_lines(text: str, section_headers: tuple[str, ...], max_line
     return out[:max_lines]
 
 
+def _split_lines_into_projects(lines: list[str]) -> list[str]:
+    """
+    Group flat lines from a Projects section into per-project items.
+    Splits on: "Project 1", "Project 2", numbered lines "1.", "2.", blank-line blocks, or title-like lines.
+    Returns list of strings, each string = one project (multi-line joined by \\n).
+    """
+    if not lines:
+        return []
+    items: list[list[str]] = []
+    current: list[str] = []
+    project_num_re = re.compile(r"^(?:project\s*#?\s*)?(\d+)[\.\)\:\-]\s*", re.I)
+    bullet_start = re.compile(r"^[\•\-\*]\s*")
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if current:
+                items.append(current)
+                current = []
+            continue
+        lower = stripped.lower()
+        # New project: "Project 1", "Project 2", "1.", "2."
+        if project_num_re.match(lower) or (len(stripped) <= 70 and (lower.startswith("project ") or lower.startswith("project:"))):
+            if current:
+                items.append(current)
+            current = [stripped]
+            continue
+        # Numbered line starting a new block (e.g. "1. Project Name")
+        if re.match(r"^\d+[\.\)]\s+.+", stripped) and len(stripped) < 100:
+            if current:
+                items.append(current)
+            current = [stripped]
+            continue
+        # Optional: short line without bullet as new title (e.g. project name only)
+        if current and len(stripped) <= 60 and not bullet_start.match(stripped) and stripped[0].isupper():
+            # Could be a new project title; treat as new if previous block has multiple lines
+            if len(current) >= 2:
+                items.append(current)
+                current = [stripped]
+                continue
+        current.append(stripped)
+
+    if current:
+        items.append(current)
+    return ["\n".join(block) for block in items]
+
+
+def _split_lines_into_experience(lines: list[str]) -> list[str]:
+    """
+    Group flat lines from Experience section into per-job items.
+    One job = one header line (Role | Company | dates) plus all following bullet/description lines.
+    Splits only on new job headers; bullet lines (•, -, *) always belong to the current job.
+    """
+    if not lines:
+        return []
+    items: list[list[str]] = []
+    current: list[str] = []
+    # Bullet or list prefix: these lines are always part of the current job, never start a new one
+    bullet_start = re.compile(r"^[\•\-\*·]\s*", re.I)
+    # Date range at line start (e.g. "Jan 2020 - Dec 2021", "2020 – 2021")
+    date_range_start = re.compile(r"^(\d{4}\s*[\-–]\s*\d{4}|\d{1,2}/\d{4}\s*[\-–].+|[A-Za-z]+\s*\d{4}\s*[\-–])", re.I)
+    # Job header: "Role | Company | dates | location" — has | and looks like title (no leading bullet)
+    def looks_like_job_header(s: str) -> bool:
+        if not s or len(s) > 120:
+            return False
+        if bullet_start.match(s):
+            return False
+        lower = s.lower()
+        # Must contain separator typical of role/company line
+        if "|" not in s and "–" not in s and " at " not in lower:
+            return False
+        # Exclude lines that are clearly bullet content (objective, outcome, skills, responsibility)
+        if any(lower.startswith(p) for p in ("• ", "- ", "* ", "objective:", "outcome:", "tools &", "skills:", "responsibilit")):
+            return False
+        return True
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if current:
+                items.append(current)
+                current = []
+            continue
+        # Bullet or list line: always append to current job, never start a new one
+        if bullet_start.match(stripped):
+            current.append(stripped)
+            continue
+        # Line that looks like "Objective:", "Outcome:", "Tools & Skills:" etc. — part of current job
+        lower = stripped.lower()
+        if lower.startswith(("objective:", "outcome:", "tools &", "skills:", "responsibilit", "• ", "- ")):
+            current.append(stripped)
+            continue
+        # New job: line starts with date range
+        if date_range_start.match(stripped):
+            if current:
+                items.append(current)
+            current = [stripped]
+            continue
+        # New job: first line of block, or a line that looks like job header (Role | Company)
+        if looks_like_job_header(stripped):
+            if current and len(current) >= 1:
+                items.append(current)
+            current = [stripped]
+            continue
+        # Any other line: append to current job
+        current.append(stripped)
+
+    if current:
+        items.append(current)
+    return ["\n".join(block) for block in items]
+
+
+def _extract_projects_as_items(text: str) -> list[str]:
+    """Get Projects section lines (higher limit) and split into per-project items."""
+    raw = _extract_section_lines(
+        text,
+        (
+            "projects:", "project:", "key projects:", "personal projects:",
+            "selected projects:", "project experience:", "project details:",
+            "projects &", "project work:", "projects and",
+        ),
+        max_lines=50,
+    )
+    return _split_lines_into_projects(raw)
+
+
+def _extract_experience_as_items(text: str) -> list[str]:
+    """Get Experience section lines (higher limit) and split into per-job items."""
+    raw = _extract_section_lines(
+        text,
+        ("experience:", "work experience:", "employment:", "professional experience:", "work history:"),
+        max_lines=50,
+    )
+    return _split_lines_into_experience(raw)
+
+
 def extract_resume_details(resume_text: str) -> dict:
     """
     Extract structured details from resume text for form pre-fill.
@@ -355,11 +536,14 @@ def extract_resume_details(resume_text: str) -> dict:
                 result["full_name"] = line[len(prefix):].strip()
                 break
 
-    # Job role: prefer lines that look like job titles (developer, analyst, etc.), skip address/location
+    # Job role: prefer lines that look like job titles (developer, analyst, etc.), skip address/location and education
+    def _looks_like_education(line: str) -> bool:
+        return bool(line and EDUCATION_HINTS.search(line))
+
     def _looks_like_role(line: str) -> bool:
         if not line or "@" in line or len(line) > 55:
             return False
-        if LOCATION_HINTS.search(line):
+        if LOCATION_HINTS.search(line) or _looks_like_education(line):
             return False
         lower = line.lower()
         return any(k in lower for k in JOB_ROLE_KEYWORDS)
@@ -369,7 +553,7 @@ def extract_resume_details(resume_text: str) -> dict:
         for prefix in ("objective:", "applying for:", "role:", "position:", "title:", "target role:", "desired role:", "profile:", "summary:"):
             if lower.startswith(prefix):
                 val = line[len(prefix):].strip()
-                if val and not LOCATION_HINTS.search(val):
+                if val and not LOCATION_HINTS.search(val) and not _looks_like_education(val):
                     result["job_role"] = val
                     break
         if result["job_role"]:
@@ -382,7 +566,7 @@ def extract_resume_details(resume_text: str) -> dict:
                 break
     if not result["job_role"]:
         for line in lines[1:10]:
-            if 5 < len(line) < 55 and "@" not in line and not line[0].isdigit() and not LOCATION_HINTS.search(line):
+            if 5 < len(line) < 55 and "@" not in line and not line[0].isdigit() and not LOCATION_HINTS.search(line) and not _looks_like_education(line):
                 result["job_role"] = line
                 break
 
@@ -438,18 +622,10 @@ def extract_resume_details(resume_text: str) -> dict:
                 break
     result["tech_stack"] = found[:20]
 
-    # Projects (Project 1, Project 2, etc.) — many header variants
-    result["projects"] = _extract_section_lines(
-        text,
-        (
-            "projects:", "project:", "key projects:", "personal projects:",
-            "selected projects:", "project experience:", "project details:",
-            "projects &", "project work:", "projects and",
-        ),
-        max_lines=15,
-    )
+    # Projects: extract as distinct items (one string per project, possibly multi-line)
+    result["projects"] = _extract_projects_as_items(text)
 
-    # Certificates (and achievements, awards, courses)
+    # Certificates (and achievements, awards, courses) — one list of lines, all in one column
     result["certificates"] = _extract_section_lines(
         text,
         (
@@ -457,15 +633,11 @@ def extract_resume_details(resume_text: str) -> dict:
             "achievement:", "certification ", "awards:", "courses:", "training:",
             "professional development:", "education & certifications:",
         ),
-        max_lines=15,
+        max_lines=30,
     )
 
-    # Experience (work experience lines)
-    result["experience"] = _extract_section_lines(
-        text,
-        ("experience:", "work experience:", "employment:", "professional experience:", "work history:"),
-        max_lines=15,
-    )
+    # Experience: extract as distinct items (one string per job, possibly multi-line)
+    result["experience"] = _extract_experience_as_items(text)
 
     # Strip section markers from all outputs so they never leak into the form
     def _strip_list(items: list) -> list:
@@ -474,6 +646,9 @@ def extract_resume_details(resume_text: str) -> dict:
     result["full_name"] = _strip_section_marker(result.get("full_name") or "")
     result["job_role"] = _strip_section_marker(result.get("job_role") or "")
     result["email"] = _strip_section_marker(result.get("email") or "")
+    # Remove [SECTION: ...] markers from resume_text so they never show in the form
+    cleaned = _strip_section_marker(result.get("resume_text") or "")
+    result["resume_text"] = re.sub(r"\n{3,}", "\n\n", cleaned).strip() if cleaned else ""
     result["links"] = _strip_list(result.get("links") or [])
     result["links_github"] = _strip_list(result.get("links_github") or [])
     result["links_linkedin"] = _strip_list(result.get("links_linkedin") or [])
@@ -505,6 +680,16 @@ async def extract_resume_details_async(resume_text: str) -> dict:
         from app.services.resume_llm_parser import parse_resume_with_llm
         llm_result = await parse_resume_with_llm(preprocessed, original)
         if llm_result:
+            # If LLM returned empty job_role (e.g. it was education), fill from rule-based
+            rule_based = extract_resume_details(preprocessed)
+            if not (llm_result.get("job_role") or "").strip():
+                llm_result["job_role"] = rule_based.get("job_role") or ""
+            # If LLM returned empty or missing links/email, merge in rule-based so we don't lose them
+            for key in ("email", "links_github", "links_linkedin", "links_portfolio", "links_other", "links"):
+                rb_val = rule_based.get(key)
+                lr_val = llm_result.get(key)
+                if rb_val and (not lr_val or (isinstance(lr_val, list) and len(lr_val) == 0) or (isinstance(lr_val, str) and not lr_val.strip())):
+                    llm_result[key] = rb_val
             return llm_result
     except Exception as e:
         logger.debug("LLM resume parse skipped or failed: %s", e)

@@ -32,6 +32,10 @@ def preprocess_resume_text(raw_text: str) -> str:
         if not stripped:
             out.append(line)
             continue
+        # Do not add a marker if the line is already a section marker (avoids "[SECTION: [SECTION: SKILLS]]")
+        if stripped.upper().startswith("[SECTION:"):
+            out.append(line)
+            continue
         # Check if this line looks like a section header
         header = _detect_section_header(stripped)
         if header:

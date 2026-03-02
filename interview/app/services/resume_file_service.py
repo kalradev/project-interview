@@ -62,6 +62,11 @@ def _extract_docx(content: bytes) -> Optional[str]:
         for para in doc.paragraphs:
             if para.text.strip():
                 parts.append(para.text)
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    if cell.text.strip():
+                        parts.append(cell.text.strip())
         result = "\n".join(parts).strip() or None
         if not result:
             logger.warning("DOCX extraction returned no text")

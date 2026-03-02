@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -13,11 +14,30 @@ from app.config import get_settings
 from app.database import init_db
 from app.routes import auth, sessions, events, integrity, interview, websocket_router, admin_candidates, admin_resumes, candidate
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: startup and shutdown."""
-    await init_db()
+    try:
+        await init_db()
+    except Exception as e:
+        err_msg = str(e).lower()
+        if (
+            "password" in err_msg
+            or "connection" in err_msg
+            or "refused" in err_msg
+            or (type(e).__module__ == "asyncpg.exceptions")
+        ):
+            logger.warning(
+                "Database connection failed at startup: %s. "
+                "Check POSTGRES_* in .env and that PostgreSQL is running. "
+                "Server starting anyway; API requests that need the DB will fail.",
+                e,
+            )
+        else:
+            raise
     yield
 
 
