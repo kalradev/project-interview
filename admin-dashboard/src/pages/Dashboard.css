@@ -1,7 +1,7 @@
 /* Dashboard layout – professional background */
 .dashboard {
-  max-width: 1280px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   padding: 0;
   min-height: 100vh;
   display: flex;
@@ -36,8 +36,8 @@
 }
 
 .dashboard-header {
-  max-width: 1280px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -61,16 +61,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
-  background: var(--color-primary-light);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .dashboard-header .header-brand {
   display: block;
-  width: 38px;
-  height: 38px;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
   transition: transform var(--transition);
 }
