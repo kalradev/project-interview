@@ -48,11 +48,16 @@ async def add_candidate(
     if existing.scalar_one_or_none():
         raise ValueError(f"Email already registered: {email}")
 
+    # Use name from resume; if missing, fall back to part before @ so list shows something
+    display_name = (full_name or "").strip() or None
+    if not display_name and email and "@" in email:
+        display_name = email.split("@")[0].strip() or None
+
     password = _generate_password()
     user = User(
         email=email,
         hashed_password=_hash_password(password),
-        full_name=full_name or None,
+        full_name=display_name,
         role=UserRole.CANDIDATE,
         is_active=True,
     )
@@ -93,7 +98,7 @@ async def add_candidate(
             password=password,
             interview_scheduled_at=interview_scheduled_at,
             setup_download_url=settings.setup_app_download_url,
-            candidate_name=full_name,
+            candidate_name=display_name,
         )
 
     return user, profile, password, email_sent, email_error

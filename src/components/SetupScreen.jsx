@@ -31,7 +31,7 @@ export function SetupScreen({ onStart }) {
     <div className="setup-screen">
       <div className="setup-card">
         <div className="setup-logo-wrap">
-          <img src="/agent.png" alt="Interview Agent" className="setup-logo" />
+          <img src={`${import.meta.env.BASE_URL}agent.png`} alt="Interview Agent" className="setup-logo" />
         </div>
         <h1>Interview setup</h1>
         <p className="setup-desc">

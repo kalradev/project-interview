@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
+import CandidateProfile from './pages/CandidateProfile'
 
 const tokenKey = 'interview_admin_token'
 
@@ -34,6 +35,14 @@ export default function App() {
         element={
           <Protected>
             <Dashboard />
+          </Protected>
+        }
+      />
+      <Route
+        path="/dashboard/candidates/:id"
+        element={
+          <Protected>
+            <CandidateProfile />
           </Protected>
         }
       />

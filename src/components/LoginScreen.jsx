@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { login, getCandidateMe, getOrCreateSession } from '../api/client'
 import { useInterviewConfig } from '../context/InterviewConfig'
+import LightRays from './LightRays'
 import './LoginScreen.css'
 
 export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
@@ -11,6 +12,21 @@ export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [cursor, setCursor] = useState({ x: 50, y: 50 })
+  const pageRef = useRef(null)
+
+  useEffect(() => {
+    const el = pageRef.current
+    if (!el) return
+    function handleMove(e) {
+      const rect = el.getBoundingClientRect()
+      const x = ((e.clientX - rect.left) / rect.width) * 100
+      const y = ((e.clientY - rect.top) / rect.height) * 100
+      setCursor({ x, y })
+    }
+    el.addEventListener('mousemove', handleMove, { passive: true })
+    return () => el.removeEventListener('mousemove', handleMove)
+  }, [])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -45,41 +61,72 @@ export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
   }
 
   return (
-    <div className="login-screen">
+    <div
+      ref={pageRef}
+      className="login-page"
+      style={{ '--cursor-x': `${cursor.x}%`, '--cursor-y': `${cursor.y}%` }}
+    >
+      <div className="login-page-cursor-glow" aria-hidden />
+      <div className="login-balls" aria-hidden>
+        {[...Array(36)].map((_, i) => (
+          <span key={i} className={`login-ball login-ball-${i + 1}`} />
+        ))}
+      </div>
+      <div className="login-bg-blob login-bg-blob-1" aria-hidden />
+      <div className="login-bg-blob login-bg-blob-2" aria-hidden />
+      <div className="login-bg-blob login-bg-blob-3" aria-hidden />
+      <div className="login-bg-blob login-bg-blob-4" aria-hidden />
+      <div className="login-page-cursor-glow login-page-cursor-glow-2" aria-hidden />
+      <div className="login-page-light-rays">
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#ffffff"
+          raysSpeed={1.2}
+          lightSpread={0.4}
+          rayLength={2.6}
+          followMouse={true}
+          mouseInfluence={0.1}
+          noiseAmount={0}
+          distortion={0.02}
+          className="login-rays"
+          pulsating={true}
+          fadeDistance={1}
+          saturation={0.95}
+        />
+      </div>
       <div className="login-card">
         <div className="login-logo-wrap">
-          <img src="/agent.png" alt="Interview Agent" className="login-logo" />
+          <img src={`${import.meta.env.BASE_URL}agent.png`} alt="Interview Agent" className="login-logo" />
         </div>
         <h1>Interview Agent</h1>
+        <p className="login-welcome">Welcome</p>
         <p className="login-desc">Log in with the email and password sent to you for the interview.</p>
         <form onSubmit={handleLogin}>
-          <label className="login-label">
+          <label>
             API URL
             <input
               type="url"
-              className="login-input"
               value={apiBaseUrl}
               onChange={(e) => setApiBaseUrl(e.target.value)}
               placeholder="http://localhost:8000"
             />
           </label>
-          <label className="login-label">
+          <label>
             Email
             <input
               type="email"
-              className="login-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="your@email.com"
             />
           </label>
-          <label className="login-label">
+          <label>
             Password
             <div className="login-password-wrap">
               <input
                 type={showPassword ? 'text' : 'password'}
-                className="login-input login-input-password"
+                className="login-input-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -102,10 +149,10 @@ export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
           </label>
           {error && <p className="login-error">{error}</p>}
           <div className="login-actions">
-            <button type="submit" className="btn btn-primary" disabled={loading}>
+            <button type="submit" className="btn-primary" disabled={loading}>
               {loading ? 'Logging in…' : 'Log in & start interview'}
             </button>
-            <button type="button" className="btn btn-secondary" onClick={onSkipToSetup}>
+            <button type="button" className="btn-secondary" onClick={onSkipToSetup}>
               Skip to setup (manual session)
             </button>
           </div>

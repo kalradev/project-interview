@@ -2,8 +2,10 @@ import { createContext, useContext, useState, useCallback } from 'react'
 
 const STORAGE_KEY = 'interview-agent-config'
 
+const defaultApiBaseUrl = (import.meta.env && import.meta.env.VITE_API_URL) || 'http://localhost:8000'
+
 const defaultConfig = {
-  apiBaseUrl: 'http://localhost:8000',
+  apiBaseUrl: defaultApiBaseUrl,
   sessionId: '',
   authToken: '',
   jobRole: '',

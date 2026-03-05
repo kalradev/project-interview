@@ -60,6 +60,18 @@ export async function addCandidate(token, data) {
   return res.json()
 }
 
+/** Get a single candidate by id (for profile page). */
+export async function getCandidate(token, candidateId) {
+  const res = await fetch(`${BASE}/api/v1/admin/candidates/${candidateId}`, {
+    headers: headers(token),
+  })
+  if (!res.ok) {
+    if (res.status === 404) return null
+    throw new Error('Failed to fetch candidate')
+  }
+  return res.json()
+}
+
 export async function getReport(token, candidateId) {
   const res = await fetch(`${BASE}/api/v1/admin/candidates/${candidateId}/report`, {
     headers: headers(token),
@@ -68,6 +80,7 @@ export async function getReport(token, candidateId) {
     if (res.status === 404) return null
     throw new Error('Failed to fetch report')
   }
+  if (res.status === 204 || res.headers.get('content-length') === '0') return null
   return res.json()
 }
 

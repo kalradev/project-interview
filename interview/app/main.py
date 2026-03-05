@@ -53,6 +53,8 @@ def create_application() -> FastAPI:
         redoc_url="/redoc",
     )
     origins = ["*"] if settings.debug else []
+    if not origins and settings.cors_origins.strip():
+        origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     if settings.environment == "development":
         origins.append("null")  # Electron file:// sends Origin: null
     app.add_middleware(

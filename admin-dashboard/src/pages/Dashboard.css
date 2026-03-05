@@ -11,6 +11,52 @@
   background-attachment: fixed;
 }
 
+/* Subtle animated background – minimal, non-distracting */
+.dashboard-bg-animation {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.dashboard-bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.12;
+  will-change: transform;
+}
+
+.dashboard-bg-blob-1 {
+  width: min(80vmax, 520px);
+  height: min(80vmax, 520px);
+  background: rgba(14, 165, 233, 0.35);
+  top: -15%;
+  left: -10%;
+  animation: dashboardBlobFloat1 22s ease-in-out infinite;
+}
+
+.dashboard-bg-blob-2 {
+  width: min(60vmax, 380px);
+  height: min(60vmax, 380px);
+  background: rgba(56, 189, 248, 0.25);
+  bottom: -10%;
+  right: -5%;
+  animation: dashboardBlobFloat2 28s ease-in-out infinite;
+}
+
+@keyframes dashboardBlobFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(4%, 3%) scale(1.02); }
+  66% { transform: translate(-2%, 5%) scale(0.98); }
+}
+
+@keyframes dashboardBlobFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-3%, -4%) scale(1.03); }
+}
+
 .dashboard::before {
   content: '';
   position: fixed;
@@ -21,6 +67,12 @@
     radial-gradient(ellipse 60% 40% at 100% 50%, rgba(3, 105, 161, 0.05) 0%, transparent 45%),
     radial-gradient(ellipse 50% 30% at 0% 80%, rgba(14, 165, 233, 0.04) 0%, transparent 45%);
   z-index: 0;
+  animation: dashboardGlowPulse 14s ease-in-out infinite;
+}
+
+@keyframes dashboardGlowPulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
 }
 
 .dashboard-header-bar {
@@ -373,10 +425,18 @@
   flex-wrap: wrap;
 }
 
-.filters {
-  margin-bottom: 1.25rem;
+.candidates-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
-.filters label {
+.candidates-section-header h2 {
+  margin: 0;
+}
+.candidates-section-filter {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -384,7 +444,7 @@
   font-weight: 500;
   color: var(--color-text-muted);
 }
-.filters select {
+.candidates-section-filter select {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -415,7 +475,6 @@
 }
 
 .candidates-section h2 {
-  margin: 0 0 1rem;
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--color-text);
@@ -504,6 +563,18 @@
   border: 1px solid transparent;
   cursor: pointer;
   transition: background var(--transition), color var(--transition), border-color var(--transition);
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+}
+.btn-action-profile {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: rgba(14, 165, 233, 0.4);
+}
+.btn-action-profile:hover {
+  background: #bae6fd;
+  color: #0369a1;
 }
 .btn-action-report {
   background: var(--color-bg);
@@ -545,10 +616,22 @@
   background: #fff;
   color: var(--color-error);
   border-color: var(--color-error);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  min-width: 2rem;
 }
-.btn-action-delete:hover {
+.btn-action-delete:hover:not(:disabled) {
   background: var(--color-error);
   color: #fff;
+}
+.btn-action-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-action-delete svg {
+  flex-shrink: 0;
 }
 
 .modal {

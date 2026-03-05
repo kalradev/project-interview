@@ -1,0 +1,348 @@
+/* Candidate profile page – same layout feel as Dashboard */
+.candidate-profile-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: linear-gradient(160deg, #f0f4f8 0%, #e2eaf2 35%, #f5f8fc 70%, #e8eef6 100%);
+  background-attachment: fixed;
+}
+
+.candidate-profile-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 165, 233, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(3, 105, 161, 0.05) 0%, transparent 45%);
+  z-index: 0;
+}
+
+.candidate-profile-header-bar {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, var(--shadow-sm);
+}
+
+.candidate-profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.candidate-profile-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.candidate-profile-header a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.candidate-profile-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  padding: 0 1.5rem 2rem;
+  max-width: 720px;
+}
+
+.candidate-profile-loading,
+.candidate-profile-error {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+}
+
+.candidate-profile-error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.candidate-profile-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(221, 228, 236, 0.8);
+  animation: cardSlideUp 0.4s var(--ease-out) both;
+}
+
+.candidate-profile-card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.candidate-details-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.candidate-photo-block {
+  flex-shrink: 0;
+}
+
+.candidate-profile-photo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.candidate-profile-photo-placeholder {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.candidate-details-fields p {
+  margin: 0.35rem 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+.candidate-details-fields a {
+  color: var(--color-primary);
+  word-break: break-all;
+}
+
+.candidate-detail-block {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.candidate-detail-block strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.candidate-detail-block ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.candidate-actions-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.no-report-msg {
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
+/* Extracted from resume */
+.extracted-output-card .extracted-resume-url {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  word-break: break-all;
+}
+
+.extracted-output-card .extracted-resume-url a {
+  color: var(--color-primary);
+}
+
+.extracted-resume-text-wrap {
+  margin-top: 0.5rem;
+}
+
+.extracted-resume-text-wrap strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.extracted-resume-text {
+  margin: 0;
+  padding: 1rem;
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+}
+
+.extracted-output-card .no-extracted-msg {
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.extracted-output-card .extracted-structured-only {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.extracted-output-card .extracted-field {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.extracted-output-card .extracted-field ul {
+  margin: 0.25rem 0 0 1.25rem;
+  padding: 0;
+}
+
+/* Reuse report styles from Dashboard */
+.report-agent-block {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: #f0f9ff;
+  border-radius: var(--radius-md);
+  border: 1px solid #bae6fd;
+}
+
+.report-agent-block h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.face-lip { font-weight: 600; }
+.face-lip-pass { color: var(--color-success); }
+.face-lip-review { color: var(--color-warning); }
+.face-lip-pending { color: var(--color-text-muted); }
+
+.report-photos,
+.report-video {
+  margin-top: 1rem;
+}
+
+.report-photos h4,
+.report-video h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.report-photo-block {
+  margin-bottom: 0.75rem;
+}
+
+.report-photo-block span {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.report-photo-block img {
+  max-width: 200px;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.photo-placeholder {
+  margin: 0.25rem 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.session-photos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.session-photos-grid img {
+  max-width: 120px;
+  max-height: 90px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.report-video video {
+  border-radius: var(--radius-md);
+  background: #0f172a;
+}
+
+.report-exchanges {
+  margin-top: 1rem;
+}
+
+.report-exchanges h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.exchange {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+}
+
+.exchange p {
+  margin: 0.3rem 0;
+}
+
+.exchange:last-child {
+  border-bottom: none;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.status-invited { background: #dbeafe; color: #1e40af; }
+.status-completed { background: #d1fae5; color: #065f46; }
+.status-selected { background: #d1fae5; color: #047857; }
+.status-rejected { background: #fee2e2; color: #b91c1c; }
+.status-next_round { background: #e0e7ff; color: #3730a3; }
+.status-in_progress { background: #fef3c7; color: #92400e; }
+.status-scheduled { background: #e0f2fe; color: #0369a1; }

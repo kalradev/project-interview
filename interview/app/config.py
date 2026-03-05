@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     # API
     api_v1_prefix: str = "/api/v1"
+    # CORS: comma-separated origins (e.g. https://dashboard.example.com). If set, used when debug=False.
+    cors_origins: str = ""
 
     # JWT
     secret_key: str = "change-me-in-production-use-long-random-string"

@@ -70,3 +70,10 @@ The app runs in fullscreen and grabs focus. To exit and return to your desktop/C
 - Press **Ctrl+Shift+8**.
 
 This closes the app and returns you to your normal desktop. Do not tell candidates this shortcut so they cannot use it during a real interview.
+
+## Deployment
+
+To deploy for production or market testing (backend, admin dashboard, and Electron installer):
+
+- See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for step-by-step instructions.
+- See **[PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md)** for production checklist and what was verified.

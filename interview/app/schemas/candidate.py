@@ -45,6 +45,8 @@ class CandidateResponse(BaseModel):
     invited_at: Optional[datetime] = None
     photo_url: Optional[str] = None
     created_at: datetime
+    resume_text: Optional[str] = None
+    resume_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

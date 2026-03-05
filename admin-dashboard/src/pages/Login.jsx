@@ -65,16 +65,16 @@ export default function Login() {
           raysOrigin="top-center"
           raysColor="#ffffff"
           raysSpeed={1.2}
-          lightSpread={0.35}
-          rayLength={3}
+          lightSpread={0.4}
+          rayLength={2.6}
           followMouse={true}
-          mouseInfluence={0.12}
+          mouseInfluence={0.1}
           noiseAmount={0}
-          distortion={0.03}
+          distortion={0.02}
           className="login-rays"
           pulsating={true}
-          fadeDistance={1.2}
-          saturation={1}
+          fadeDistance={1}
+          saturation={0.95}
         />
       </div>
       <div className="login-card">

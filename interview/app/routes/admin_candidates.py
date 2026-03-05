@@ -34,7 +34,13 @@ from app.services.candidate_service import (
 router = APIRouter()
 
 
-def _candidate_to_response(profile: CandidateProfile, email: str, full_name: str | None) -> CandidateResponse:
+def _candidate_to_response(
+    profile: CandidateProfile,
+    email: str,
+    full_name: str | None,
+    *,
+    include_resume: bool = False,
+) -> CandidateResponse:
     return CandidateResponse(
         id=profile.id,
         user_id=profile.user_id,
@@ -53,6 +59,8 @@ def _candidate_to_response(profile: CandidateProfile, email: str, full_name: str
         invited_at=profile.invited_at,
         photo_url=profile.photo_url,
         created_at=profile.created_at,
+        resume_text=profile.resume_text if include_resume else None,
+        resume_url=profile.resume_url if include_resume else None,
     )
 
 
@@ -103,6 +111,26 @@ async def list_candidates(
         _candidate_to_response(profile, user.email, user.full_name)
         for profile, user in rows
     ]
+
+
+@router.get("/{candidate_id}", response_model=CandidateResponse)
+async def get_candidate(
+    candidate_id: UUID,
+    db: AsyncSession = Depends(get_async_session),
+    _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
+):
+    """Get a single candidate by id (for profile page)."""
+    profile_result = await db.execute(
+        select(CandidateProfile).where(CandidateProfile.id == candidate_id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+    user_result = await db.execute(select(User).where(User.id == profile.user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return _candidate_to_response(profile, user.email, user.full_name, include_resume=True)
 
 
 @router.get("/{candidate_id}/report", response_model=InterviewReportResponse | None)
