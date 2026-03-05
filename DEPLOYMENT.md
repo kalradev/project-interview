@@ -51,7 +51,7 @@ cp .env.example .env
 | `ENVIRONMENT` | `production` |
 | `CORS_ORIGINS` | Your dashboard URL (no domain needed), e.g. `https://your-project.vercel.app` |
 | `SECRET_KEY` | Long random string (e.g. `openssl rand -hex 32`). **Never use the default.** |
-| `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Your PostgreSQL connection details |
+| `DATABASE_URL` **or** `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database connection. No localhost is hardcoded. Use **DATABASE_URL** (e.g. `postgresql://user:pass@host:5432/db`) when your host provides it (Render, Supabase). Otherwise set all **POSTGRES_*** vars. |
 | `OPENAI_API_KEY` | If you use AI interview questions |
 
 **Optional:** Email (Brevo or SMTP), `SETUP_APP_DOWNLOAD_URL` (link to installer for invite emails).
@@ -62,7 +62,7 @@ cp .env.example .env
 
 1. Create a project, add PostgreSQL from the catalog.
 2. Add a new service from the `interview/` directory (or connect GitHub repo and set root to `interview`).
-3. In Variables, set all vars from `.env` (Railway exposes `DATABASE_URL` from PostgreSQL; you can keep `POSTGRES_*` or map from `DATABASE_URL` if your app supports it).
+3. In Variables, set all vars from `.env`. Railway exposes **DATABASE_URL** from PostgreSQL – the app reads it automatically. Alternatively set **POSTGRES_HOST**, **POSTGRES_USER**, **POSTGRES_PASSWORD**, **POSTGRES_DB** (and optionally **POSTGRES_PORT**).
 4. Set `CORS_ORIGINS` to your dashboard URL (no domain needed, e.g. `https://your-project.vercel.app`).
 5. Deploy. Note the public URL (e.g. `https://your-project.railway.app`).
 
@@ -71,7 +71,7 @@ cp .env.example .env
 1. New Web Service, connect repo, root directory: `interview`.
 2. Build: `pip install -r requirements.txt` (or your install command).
 3. Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
-4. Add PostgreSQL from Render dashboard; set env vars including `CORS_ORIGINS`.
+4. Add PostgreSQL from Render dashboard; Render sets **DATABASE_URL** automatically – the app uses it. Set **CORS_ORIGINS** and other env vars.
 
 **Option C – VPS (e.g. Ubuntu)**
 

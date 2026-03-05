@@ -8,8 +8,12 @@ or:
 
   python -m scripts.create_schema
 
-Uses POSTGRES_* from .env. Tables created: users, candidate_profiles,
-interview_sessions, suspicious_events, interview_exchanges, answer_analyses, integrity_scores.
+Database config: uses DATABASE_URL or POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER,
+POSTGRES_PASSWORD, POSTGRES_DB from environment (no hardcoded localhost).
+Works with cloud PostgreSQL (Render, Supabase, etc.) when those env vars are set on deployment.
+
+Tables created: users, candidate_profiles, interview_sessions, suspicious_events,
+interview_exchanges, answer_analyses, integrity_scores, session_photos.
 """
 
 import asyncio
