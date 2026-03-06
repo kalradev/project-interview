@@ -89,7 +89,9 @@ function InterviewApp() {
     [isConnected, config.apiBaseUrl, config.sessionId, config.authToken]
   )
 
-  const { showWarning, isDisqualified, dismissWarning, tabSwitchCount } = useTabSwitchMonitor({ onLeave })
+  // Only count "leave screen" during the actual interview; ignore blur on login/setup/photo so candidate cannot be disqualified before logging in
+  const interviewActive = screen === 'interview'
+  const { showWarning, isDisqualified, dismissWarning, tabSwitchCount } = useTabSwitchMonitor({ onLeave, enabled: interviewActive })
 
   useEffect(() => {
     if (screen === 'interview' && window.electronAPI?.enterInterviewMode) {

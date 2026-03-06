@@ -1,18 +1,35 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron')
 const path = require('path')
+const fs = require('fs')
 
 let mainWindow = null
 let allowClose = false // true when user legitimately ends interview and requests close
 let interviewMode = false // when true, block copy/cut shortcuts to reduce cheating
+
+function getIconPath() {
+  const root = path.join(__dirname, '..')
+  // On Windows, .ico often renders more clearly in the title bar than .png
+  if (process.platform === 'win32') {
+    const publicIco = path.join(root, 'public', 'agent.ico')
+    if (fs.existsSync(publicIco)) return publicIco
+  }
+  const distPng = path.join(root, 'dist', 'agent.png')
+  const publicPng = path.join(root, 'public', 'agent.png')
+  if (fs.existsSync(distPng)) return distPng
+  if (fs.existsSync(publicPng)) return publicPng
+  return null
+}
 
 function createWindow() {
   allowClose = false
   interviewMode = false
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
 
+  const iconPath = getIconPath()
   mainWindow = new BrowserWindow({
     width,
     height,
+    ...(iconPath && { icon: iconPath }),
     fullscreen: false,
     kiosk: false,
     frame: true,
@@ -31,7 +48,6 @@ function createWindow() {
   const useDevServer = process.env.ELECTRON_DEV === '1'
   if (useDevServer) {
     mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
   }
@@ -62,8 +78,12 @@ function createWindow() {
     if (allowClose) {
       return // allow window to close (user chose "End interview" -> Close)
     }
+    // Only block close during the actual interview; on login/setup/photo the user can close the window normally
+    if (!interviewMode) {
+      return // allow close (e.g. X button on login screen)
+    }
     event.preventDefault()
-    mainWindow.webContents.send('app-blur') // Alt+F4 or close: first time = warning, second = disqualify
+    mainWindow.webContents.send('app-blur') // during interview: first time = warning, then disqualify
   })
 
   mainWindow.on('blur', () => {

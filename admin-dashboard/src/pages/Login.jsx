@@ -50,6 +50,31 @@ export default function Login() {
       style={{ '--cursor-x': `${cursor.x}%`, '--cursor-y': `${cursor.y}%` }}
     >
       <div className="login-page-cursor-glow" aria-hidden />
+      <div className="login-stars" aria-hidden>
+        {(() => {
+          const count = 48
+          const positions = [
+            [5, 12], [18, 8], [32, 15], [45, 6], [58, 22], [72, 11], [88, 18], [92, 35],
+            [7, 28], [22, 42], [38, 38], [55, 52], [68, 45], [82, 58], [12, 55], [28, 62],
+            [42, 72], [62, 68], [78, 75], [8, 78], [35, 85], [52, 82], [72, 88], [95, 65],
+            [15, 92], [48, 95], [85, 42], [3, 45], [25, 25], [75, 28], [50, 35], [33, 48],
+            [65, 55], [10, 65], [55, 78], [90, 82], [18, 35], [42, 18], [88, 52], [5, 58],
+            [60, 12], [28, 72], [72, 38], [12, 48], [48, 62], [82, 22], [35, 92], [95, 78],
+          ]
+          return positions.slice(0, count).map(([left, top], i) => (
+            <span
+              key={i}
+              className="login-star"
+              style={{
+                left: `${left}%`,
+                top: `${top}%`,
+                animationDelay: `${(i * 0.7 + (i % 5) * 2) % 12}s`,
+                animationDuration: `${2.5 + (i % 4) * 0.8}s`,
+              }}
+            />
+          ))
+        })()}
+      </div>
       <div className="login-balls" aria-hidden>
         {[...Array(36)].map((_, i) => (
           <span key={i} className={`login-ball login-ball-${i + 1}`} />
