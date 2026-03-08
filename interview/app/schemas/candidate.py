@@ -23,6 +23,10 @@ class CandidateCreate(BaseModel):
     source: str = "manual"
     interview_scheduled_at: Optional[datetime] = None
     send_email: bool = True
+    ats_score: Optional[float] = None  # When > 60, invite email is sent to candidate regardless of send_email
+    matched_skills: Optional[list[str]] = None  # Stored in candidate details (ATS analysis)
+    missing_skills: Optional[list[str]] = None
+    suggestions: Optional[list[str]] = None
 
 
 class CandidateResponse(BaseModel):
@@ -41,6 +45,7 @@ class CandidateResponse(BaseModel):
     source: str
     status: str
     ats_score: Optional[float] = None
+    ats_details: Optional[dict] = None  # { matched_skills, missing_skills, suggestions }
     interview_scheduled_at: Optional[datetime] = None
     invited_at: Optional[datetime] = None
     photo_url: Optional[str] = None
@@ -63,6 +68,7 @@ class ResumeExtractRequest(BaseModel):
     """Request to extract details from resume text for form pre-fill."""
 
     resume_text: str
+    job_description: str = ""  # Optional; when provided, ATS score is computed against it
 
 
 class ResumeExtractResponse(BaseModel):
@@ -81,7 +87,10 @@ class ResumeExtractResponse(BaseModel):
     certificates: list[str] = []
     experience: list[str] = []
     resume_text: str = ""
-    ats_score: float = 0.0  # 0–100; computed on extract
+    ats_score: float = 0.0  # 0–100; computed dynamically from resume + job description
+    matched_skills: list[str] = []  # Skills from job description found in resume
+    missing_skills: list[str] = []  # Skills from job description not found in resume
+    suggestions: list[str] = []  # Improvement suggestions for the candidate
 
 
 class ResumeFromPlatformRequest(BaseModel):

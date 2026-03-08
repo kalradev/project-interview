@@ -4,6 +4,7 @@ import { InterviewConfigProvider, useInterviewConfig } from './context/Interview
 import { LoginScreen } from './components/LoginScreen'
 import { SetupScreen } from './components/SetupScreen'
 import { PhotoCapture } from './components/PhotoCapture'
+import { WaitForInterview } from './components/WaitForInterview'
 import { InterviewFlow } from './components/InterviewFlow'
 import { logEvent, endSession, computeIntegrity } from './api/client'
 import './App.css'
@@ -61,7 +62,7 @@ function DisqualifiedScreen() {
 
 function InterviewApp() {
   const { config, isConnected } = useInterviewConfig()
-  const [screen, setScreen] = useState('login') // login | setup | photo | interview
+  const [screen, setScreen] = useState('login') // login | setup | photo | ready | interview
   const [candidateInfo, setCandidateInfo] = useState(null)
 
   const onLeave = useCallback(
@@ -152,7 +153,16 @@ function InterviewApp() {
   if (screen === 'photo') {
     return (
       <PhotoCapture
-        onDone={() => setScreen('interview')}
+        onDone={() => setScreen('ready')}
+      />
+    )
+  }
+
+  if (screen === 'ready') {
+    return (
+      <WaitForInterview
+        candidateInfo={candidateInfo}
+        onJoin={() => setScreen('interview')}
       />
     )
   }

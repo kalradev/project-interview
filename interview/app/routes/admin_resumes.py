@@ -1,6 +1,6 @@
 """Admin routes - ingest resume from job platform; shortlist by ATS >= 85, send email."""
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_roles
@@ -15,7 +15,7 @@ from app.schemas.candidate import (
 from app.services.candidate_service import add_candidate
 from app.services.resume_file_service import extract_text_from_resume_file
 from app.services.resume_platform_service import (
-    compute_ats_score,
+    compute_ats_score_detailed,
     extract_email_from_resume,
     extract_resume_details_async,
     is_shortlisted,
@@ -27,7 +27,13 @@ ALLOWED_EXTENSIONS = {".pdf", ".docx"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
-def _details_to_response(details: dict, ats_score: float = 0.0) -> ResumeExtractResponse:
+def _details_to_response(
+    details: dict,
+    ats_score: float = 0.0,
+    matched_skills: list[str] | None = None,
+    missing_skills: list[str] | None = None,
+    suggestions: list[str] | None = None,
+) -> ResumeExtractResponse:
     return ResumeExtractResponse(
         email=details.get("email", ""),
         full_name=details.get("full_name", ""),
@@ -43,6 +49,9 @@ def _details_to_response(details: dict, ats_score: float = 0.0) -> ResumeExtract
         experience=details.get("experience", []),
         resume_text=details.get("resume_text", ""),
         ats_score=ats_score,
+        matched_skills=matched_skills or [],
+        missing_skills=missing_skills or [],
+        suggestions=suggestions or [],
     )
 
 
@@ -51,18 +60,26 @@ async def extract_resume(
     payload: ResumeExtractRequest,
     _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
 ):
-    """Extract structured details: preprocess with section markers, then LLM or rule-based parse."""
+    """Extract structured details: preprocess with section markers, then LLM or rule-based parse. ATS score is computed dynamically from resume and optional job description."""
     details = await extract_resume_details_async(payload.resume_text)
-    ats_score = compute_ats_score(payload.resume_text, details.get("job_role") or "")
-    return _details_to_response(details, ats_score=ats_score)
+    job_desc = (payload.job_description or "").strip()
+    ats_result = compute_ats_score_detailed(payload.resume_text, job_desc, details)
+    return _details_to_response(
+        details,
+        ats_score=ats_result.ats_score,
+        matched_skills=ats_result.matched_skills,
+        missing_skills=ats_result.missing_skills,
+        suggestions=ats_result.suggestions,
+    )
 
 
 @router.post("/extract-file", response_model=ResumeExtractResponse)
 async def extract_resume_file(
     file: UploadFile = File(...),
+    job_description: str = Form(""),
     _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
 ):
-    """Upload a resume (PDF or DOCX); extract text and return same structured details for form pre-fill."""
+    """Upload a resume (PDF or DOCX); extract text and return same structured details for form pre-fill. Optional job_description for dynamic ATS scoring."""
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing filename")
     ext = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
@@ -85,8 +102,15 @@ async def extract_resume_file(
             ),
         )
     details = await extract_resume_details_async(text)
-    ats_score = compute_ats_score(text, details.get("job_role") or "")
-    return _details_to_response(details, ats_score=ats_score)
+    job_desc = (job_description or "").strip()
+    ats_result = compute_ats_score_detailed(text, job_desc, details)
+    return _details_to_response(
+        details,
+        ats_score=ats_result.ats_score,
+        matched_skills=ats_result.matched_skills,
+        missing_skills=ats_result.missing_skills,
+        suggestions=ats_result.suggestions,
+    )
 
 
 @router.post("/from-platform", response_model=ResumeFromPlatformResponse)
@@ -110,7 +134,8 @@ async def resume_from_platform(
             candidate_id=None,
         )
 
-    ats_score = compute_ats_score(payload.resume_text, payload.job_role)
+    ats_result = compute_ats_score_detailed(payload.resume_text, payload.job_role or "", None)
+    ats_score = ats_result.ats_score
     if not is_shortlisted(ats_score):
         return ResumeFromPlatformResponse(
             shortlisted=False,

@@ -26,7 +26,11 @@ def main():
             ALTER TABLE candidate_profiles
             ADD COLUMN IF NOT EXISTS ats_score DOUBLE PRECISION
         """))
-        print("Added candidate_profiles.ats_score if missing.")
+        conn.execute(text("""
+            ALTER TABLE candidate_profiles
+            ADD COLUMN IF NOT EXISTS ats_details JSONB
+        """))
+        print("Added candidate_profiles.ats_score and ats_details if missing.")
 
         # Create session_photos and video_url on interview_sessions if missing
         conn.execute(text("""

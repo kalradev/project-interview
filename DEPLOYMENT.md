@@ -54,7 +54,7 @@ cp .env.example .env
 | `DATABASE_URL` **or** `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database connection. No localhost is hardcoded. Use **DATABASE_URL** (e.g. `postgresql://user:pass@host:5432/db`) when your host provides it (Render, Supabase). Otherwise set all **POSTGRES_*** vars. |
 | `OPENAI_API_KEY` | If you use AI interview questions |
 
-**Optional:** Email (Brevo or SMTP), `SETUP_APP_DOWNLOAD_URL` (link to installer for invite emails).
+**Optional:** Email (Brevo or SMTP), `SETUP_APP_DOWNLOAD_URL` (link to installer for invite emails). For correct interview times in invite emails and default scheduling, set `INTERVIEW_TIMEZONE` (e.g. `Asia/Kolkata`, `America/New_York`) so times are shown in the candidate’s timezone.
 
 ### 1.2 Deploy to a host
 

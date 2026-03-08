@@ -106,12 +106,12 @@ export async function deleteCandidate(token, candidateId) {
   return res.json()
 }
 
-/** Extract details from resume text for form pre-fill. */
-export async function extractResumeDetails(token, resumeText) {
+/** Extract details from resume text for form pre-fill. Optional jobDescription for dynamic ATS scoring. */
+export async function extractResumeDetails(token, resumeText, jobDescription = '') {
   const res = await fetch(`${BASE}/api/v1/admin/resumes/extract`, {
     method: 'POST',
     headers: headers(token),
-    body: JSON.stringify({ resume_text: resumeText }),
+    body: JSON.stringify({ resume_text: resumeText, job_description: jobDescription || '' }),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
@@ -120,13 +120,14 @@ export async function extractResumeDetails(token, resumeText) {
   return res.json()
 }
 
-/** Upload resume file (PDF or DOCX); returns extracted details for form pre-fill. */
-export async function extractResumeFromFile(token, file) {
+/** Upload resume file (PDF or DOCX); returns extracted details for form pre-fill. Optional jobDescription for dynamic ATS scoring. */
+export async function extractResumeFromFile(token, file, jobDescription = '') {
   if (!token) {
     throw new Error('Not logged in. Please sign in again.')
   }
   const form = new FormData()
   form.append('file', file)
+  if (jobDescription) form.append('job_description', jobDescription)
   const res = await fetch(`${BASE}/api/v1/admin/resumes/extract-file`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },

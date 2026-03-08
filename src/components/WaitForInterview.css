@@ -1,0 +1,84 @@
+.wait-for-interview-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--ia-bg);
+}
+
+.wait-for-interview-card {
+  background: var(--ia-bg-card);
+  border-radius: var(--ia-radius-lg);
+  padding: 2.25rem;
+  max-width: 420px;
+  width: 100%;
+  border: 1px solid var(--ia-border);
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  animation: iaSlideUp 0.45s var(--ia-ease-out) both;
+}
+
+.wait-for-interview-card h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ia-text);
+  letter-spacing: -0.02em;
+}
+
+.wait-scheduled-time {
+  color: var(--ia-text-subtle);
+  font-size: 0.9375rem;
+  margin: 0 0 1.25rem 0;
+  line-height: 1.45;
+}
+
+.wait-scheduled-time strong {
+  color: var(--ia-text);
+}
+
+.wait-message {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0 0 1.25rem 0;
+}
+
+.wait-message-ok {
+  color: var(--ia-text-subtle);
+}
+
+.wait-message-wait {
+  color: var(--ia-text);
+}
+
+.wait-join-btn {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.wait-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--ia-bg);
+  border-radius: var(--ia-radius-md);
+  border: 1px solid var(--ia-border);
+}
+
+.wait-countdown-label {
+  font-size: 0.8125rem;
+  color: var(--ia-text-subtle);
+}
+
+.wait-countdown-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ia-text);
+}

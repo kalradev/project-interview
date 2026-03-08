@@ -55,6 +55,7 @@ def _candidate_to_response(
         source=profile.source,
         status=profile.status,
         ats_score=profile.ats_score,
+        ats_details=getattr(profile, "ats_details", None),
         interview_scheduled_at=profile.interview_scheduled_at,
         invited_at=profile.invited_at,
         photo_url=profile.photo_url,
@@ -70,7 +71,16 @@ async def import_candidate(
     db: AsyncSession = Depends(get_async_session),
     _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
 ):
-    """Import a candidate (from Naukri/manual/CSV). Creates user, sends invite email with password and interview time."""
+    """Import a candidate (from Naukri/manual/CSV). Creates user. When ATS score > 60, invite email is sent to the candidate's email; otherwise respects send_email toggle. ATS details (matched/missing skills, suggestions) are stored in candidate details."""
+    ats = payload.ats_score
+    send_invite = payload.send_email or (ats is not None and ats > 60)
+    ats_details = None
+    if payload.matched_skills is not None or payload.missing_skills is not None or payload.suggestions is not None:
+        ats_details = {
+            "matched_skills": payload.matched_skills or [],
+            "missing_skills": payload.missing_skills or [],
+            "suggestions": payload.suggestions or [],
+        }
     try:
         user, profile, _, email_sent, email_error = await add_candidate(
             db,
@@ -86,7 +96,9 @@ async def import_candidate(
             experience=payload.experience,
             source=payload.source,
             interview_scheduled_at=payload.interview_scheduled_at,
-            send_email=payload.send_email,
+            send_email=send_invite,
+            ats_score=ats,
+            ats_details=ats_details,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

@@ -49,6 +49,7 @@ export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
           jobRole: sessionData.job_role,
           techStack: sessionData.tech_stack || [],
           email: profile.email,
+          interviewScheduledAt: profile.interview_scheduled_at || null,
         })
         return
       }
@@ -150,7 +151,7 @@ export function LoginScreen({ onLoggedInAsCandidate, onSkipToSetup }) {
           {error && <p className="login-error">{error}</p>}
           <div className="login-actions">
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Logging in…' : 'Log in & start interview'}
+              {loading ? 'Logging in…' : 'Log in'}
             </button>
             <button type="button" className="btn-secondary" onClick={onSkipToSetup}>
               Skip to setup (manual session)

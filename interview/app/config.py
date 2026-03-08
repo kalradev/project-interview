@@ -91,6 +91,10 @@ class Settings(BaseSettings):
     smtp_from_email: str = ""
     # Link to download Interview Agent setup (e.g. your server or GitHub release)
     setup_app_download_url: str = "https://github.com/your-org/interview-agent/releases/latest"
+    # Interview scheduling window (default 11:00 AM–5:00 PM in given timezone)
+    interview_window_start_hour: int = Field(default=11, ge=0, le=23, description="Start hour (0–23) for interview slot")
+    interview_window_end_hour: int = Field(default=17, ge=0, le=23, description="End hour (0–23) for interview slot")
+    interview_timezone: str = Field(default="UTC", description="Timezone for interview window (e.g. Asia/Kolkata)")
     # Dir to store uploaded candidate photos (relative to app or absolute)
     upload_photos_dir: str = "uploads/photos"
     upload_videos_dir: str = "uploads/videos"

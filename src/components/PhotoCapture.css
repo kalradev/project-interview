@@ -50,6 +50,29 @@
   border: 1px solid var(--ia-border);
 }
 
+.photo-capture-preview-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ia-text-subtle);
+  margin: 0 0 0.75rem 0;
+}
+
+.photo-capture-preview-img {
+  width: 100%;
+  max-width: 320px;
+  border-radius: var(--ia-radius-md);
+  background: var(--ia-bg);
+  margin-bottom: 1rem;
+  border: 1px solid var(--ia-border);
+  display: block;
+  object-fit: cover;
+}
+
+.photo-capture-uploading {
+  color: var(--ia-text-subtle);
+  margin: 1rem 0 0;
+}
+
 .photo-capture-actions {
   display: flex;
   flex-direction: column;

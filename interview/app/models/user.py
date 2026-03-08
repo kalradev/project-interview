@@ -4,8 +4,8 @@ import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import DateTime, Enum, String, TypeDecorator
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, String, TypeDecorator
+from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -19,21 +19,31 @@ class UserRole(str, PyEnum):
     CANDIDATE = "candidate"
 
 
-# Map DB values (uppercase or lowercase) to UserRole so old rows with 'ADMIN' still load
+# PostgreSQL enum 'userrole' - if you see "invalid input value for enum userrole: 'candidate'",
+# the DB likely has uppercase labels; use name="userrole", values uppercase, create_type=False.
+USERROLE_ENUM = ENUM(
+    "ADMIN",
+    "INTERVIEWER",
+    "CANDIDATE",
+    name="userrole",
+    create_type=False,
+)
+
+# Map DB values (any casing) to UserRole for reading
 _ROLE_MAP = {v.value: v for v in UserRole} | {v.name: v for v in UserRole} | {v.value.upper(): v for v in UserRole}
 
 
 class _UserRoleType(TypeDecorator):
-    """Stores role as string; accepts both 'admin' and 'ADMIN' from DB (avoids LookupError)."""
-    impl = String(32)
+    """Binds UserRole as enum name (e.g. CANDIDATE) for DB; reads back any casing as UserRole."""
+    impl = USERROLE_ENUM
     cache_ok = True
 
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
         if isinstance(value, UserRole):
-            return value.value
-        return value if isinstance(value, str) else str(value)
+            return value.name  # CANDIDATE so DB enum with uppercase labels accepts it
+        return value
 
     def process_result_value(self, value, dialect):
         if value is None:

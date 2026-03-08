@@ -2,9 +2,20 @@
 
 import logging
 import re
+from dataclasses import dataclass
 from typing import Optional
 
 from app.services.resume_preprocess import preprocess_resume_text
+
+
+@dataclass
+class ATSResult:
+    """Result of dynamic ATS scoring: score 0-100 plus matched/missing skills and suggestions."""
+
+    ats_score: float
+    matched_skills: list[str]
+    missing_skills: list[str]
+    suggestions: list[str]
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +51,13 @@ EDUCATION_HINTS = re.compile(
     r"\b(cbse|icse|state\s+board)\b",
     re.I,
 )
+# Experience/internship entry: line contains a date range (e.g. "Aug 2023 - Oct 2023") — not a job role
+EXPERIENCE_DATE_RANGE_RE = re.compile(
+    r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\d{4}\s*[-–]|"
+    r"\b\d{1,2}/\d{4}\s*[-–]|"
+    r"\b(202[0-9]|201[0-9])\s*[-–]\s*(202[0-9]|201[0-9]|present|current)\b",
+    re.I,
+)
 
 # Tech/skill keywords to detect from resume (lowercase)
 TECH_SKILLS = [
@@ -48,6 +66,20 @@ TECH_SKILLS = [
     "git", "github", "rest", "api", "graphql", "machine learning", "tensorflow", "pytorch", "scikit-learn",
     "c++", "c#", ".net", "go", "golang", "rust", "php", "ruby", "ruby on rails", "rails", "django", "flask",
     "agile", "scrum", "jira", "ci/cd", "jenkins", "terraform", "ansible", "linux",
+]
+
+# Skills often mentioned in job descriptions (for ATS required-skills extraction)
+JOB_DESC_SKILLS = TECH_SKILLS + [
+    "power bi", "tableau", "excel", "spark", "pandas", "numpy", "nlp", "data analysis",
+    "data science", "cloud", "azure", "gcp", "microservices", "kubernetes", "k8s",
+    "redis", "elasticsearch", "kafka", "rabbitmq", "redux", "sass", "webpack",
+]
+
+# Education degree keywords (for education match)
+EDUCATION_DEGREE_KEYWORDS = [
+    "b.tech", "btech", "b.e.", "be", "m.tech", "mtech", "m.e.", "me",
+    "b.sc", "bsc", "m.sc", "msc", "bca", "mca", "mba", "b.com", "m.com",
+    "bachelor", "master", "phd", "ph.d", "graduation", "post graduation",
 ]
 
 # Common keywords that boost ATS (adjust per job role if needed)
@@ -61,6 +93,11 @@ RESUME_KEYWORDS = [
 def is_education_line(line: str) -> bool:
     """True if the line looks like education (college, GPA, degree, etc.), not a job title."""
     return bool(line and line.strip() and EDUCATION_HINTS.search(line))
+
+
+def _looks_like_experience_entry_line(line: str) -> bool:
+    """True if line looks like an experience/internship entry (has date range), not a target job role."""
+    return bool(line and isinstance(line, str) and EXPERIENCE_DATE_RANGE_RE.search(line))
 
 
 def extract_email_from_resume(resume_text: str) -> Optional[str]:
@@ -536,14 +573,18 @@ def extract_resume_details(resume_text: str) -> dict:
                 result["full_name"] = line[len(prefix):].strip()
                 break
 
-    # Job role: prefer lines that look like job titles (developer, analyst, etc.), skip address/location and education
+    # Job role: prefer lines that look like job titles (developer, analyst, etc.), skip address/location, education, and experience/internship entries with dates
     def _looks_like_education(line: str) -> bool:
         return bool(line and EDUCATION_HINTS.search(line))
+
+    def _looks_like_experience_entry(line: str) -> bool:
+        """True if line looks like an experience/internship entry (has date range), not a target job role."""
+        return bool(line and EXPERIENCE_DATE_RANGE_RE.search(line))
 
     def _looks_like_role(line: str) -> bool:
         if not line or "@" in line or len(line) > 55:
             return False
-        if LOCATION_HINTS.search(line) or _looks_like_education(line):
+        if LOCATION_HINTS.search(line) or _looks_like_education(line) or _looks_like_experience_entry(line):
             return False
         lower = line.lower()
         return any(k in lower for k in JOB_ROLE_KEYWORDS)
@@ -553,7 +594,7 @@ def extract_resume_details(resume_text: str) -> dict:
         for prefix in ("objective:", "applying for:", "role:", "position:", "title:", "target role:", "desired role:", "profile:", "summary:"):
             if lower.startswith(prefix):
                 val = line[len(prefix):].strip()
-                if val and not LOCATION_HINTS.search(val) and not _looks_like_education(val):
+                if val and not LOCATION_HINTS.search(val) and not _looks_like_education(val) and not _looks_like_experience_entry(val):
                     result["job_role"] = val
                     break
         if result["job_role"]:
@@ -566,7 +607,7 @@ def extract_resume_details(resume_text: str) -> dict:
                 break
     if not result["job_role"]:
         for line in lines[1:10]:
-            if 5 < len(line) < 55 and "@" not in line and not line[0].isdigit() and not LOCATION_HINTS.search(line) and not _looks_like_education(line):
+            if 5 < len(line) < 55 and "@" not in line and not line[0].isdigit() and not LOCATION_HINTS.search(line) and not _looks_like_education(line) and not _looks_like_experience_entry(line):
                 result["job_role"] = line
                 break
 
@@ -645,6 +686,8 @@ def extract_resume_details(resume_text: str) -> dict:
 
     result["full_name"] = _strip_section_marker(result.get("full_name") or "")
     result["job_role"] = _strip_section_marker(result.get("job_role") or "")
+    if _looks_like_experience_entry_line(result["job_role"]):
+        result["job_role"] = ""  # Don't use experience/internship entry as job role
     result["email"] = _strip_section_marker(result.get("email") or "")
     # Remove [SECTION: ...] markers from resume_text so they never show in the form
     cleaned = _strip_section_marker(result.get("resume_text") or "")
@@ -680,9 +723,10 @@ async def extract_resume_details_async(resume_text: str) -> dict:
         from app.services.resume_llm_parser import parse_resume_with_llm
         llm_result = await parse_resume_with_llm(preprocessed, original)
         if llm_result:
-            # If LLM returned empty job_role (e.g. it was education), fill from rule-based
+            # If LLM returned empty job_role or one that looks like an experience/internship entry (e.g. "Data Science with AI, MI Aug 2023 - Oct 2023"), use rule-based
             rule_based = extract_resume_details(preprocessed)
-            if not (llm_result.get("job_role") or "").strip():
+            job_role = (llm_result.get("job_role") or "").strip()
+            if not job_role or _looks_like_experience_entry_line(job_role):
                 llm_result["job_role"] = rule_based.get("job_role") or ""
             # If LLM returned empty or missing links/email, merge in rule-based so we don't lose them
             for key in ("email", "links_github", "links_linkedin", "links_portfolio", "links_other", "links"):
@@ -694,6 +738,186 @@ async def extract_resume_details_async(resume_text: str) -> dict:
     except Exception as e:
         logger.debug("LLM resume parse skipped or failed: %s", e)
     return extract_resume_details(preprocessed)
+
+
+def _normalize_skill(s: str) -> str:
+    """Lowercase, strip; for consistent matching."""
+    if not s or not isinstance(s, str):
+        return ""
+    return s.lower().strip()
+
+
+def _extract_skills_from_text(text: str, skill_list: list[str]) -> list[str]:
+    """Return list of skills from skill_list that appear in text (lowercase)."""
+    if not text or not isinstance(text, str):
+        return []
+    text_lower = text.lower()
+    found = []
+    for skill in sorted(skill_list, key=len, reverse=True):
+        if skill in text_lower and skill not in found:
+            # Avoid subsumed (e.g. "node" vs "node.js")
+            if not any(skill in f for f in found):
+                found.append(skill)
+    return found
+
+
+def _extract_education_from_resume(resume_text: str) -> list[str]:
+    """Extract education section lines from resume for education match."""
+    if not resume_text or not isinstance(resume_text, str):
+        return []
+    text_lower = resume_text.lower()
+    for header in ("education:", "academic:", "qualification:", "degrees:"):
+        idx = text_lower.find(header)
+        if idx >= 0:
+            start = idx + len(header)
+            end = text_lower.find("\n\n", start)
+            chunk = resume_text[start : (end if end >= 0 else start + 1200)]
+            lines = [ln.strip() for ln in chunk.splitlines() if ln.strip() and len(ln.strip()) > 2]
+            return lines[:15]
+    return []
+
+
+def _extract_required_from_job_description(job_description: str) -> dict:
+    """
+    Extract required skills, education hints, experience keywords, and general keywords
+    from job description text for ATS matching.
+    """
+    if not job_description or not isinstance(job_description, str):
+        return {
+            "required_skills": [],
+            "education_keywords": [],
+            "experience_keywords": [],
+            "general_keywords": [],
+        }
+    jd_lower = job_description.lower()
+    required_skills = _extract_skills_from_text(job_description, JOB_DESC_SKILLS)
+    education_keywords = [e for e in EDUCATION_DEGREE_KEYWORDS if e in jd_lower]
+    experience_keywords = []
+    for kw in ("experience", "years", "yoe", "relevant experience", "work experience", "industry"):
+        if kw in jd_lower:
+            experience_keywords.append(kw)
+    general_keywords = []
+    for kw in ("communication", "team", "leadership", "problem solving", "analytics", "development", "project"):
+        if kw in jd_lower:
+            general_keywords.append(kw)
+    return {
+        "required_skills": required_skills,
+        "education_keywords": education_keywords,
+        "experience_keywords": experience_keywords,
+        "general_keywords": general_keywords,
+    }
+
+
+def compute_ats_score_detailed(
+    resume_text: str,
+    job_description: str,
+    details: Optional[dict] = None,
+) -> ATSResult:
+    """
+    Compute ATS score 0-100 dynamically from resume and job description.
+    Weights: Skills 40%, Experience 25%, Education 15%, Keyword 20%.
+    Returns ats_score, matched_skills, missing_skills, suggestions.
+    """
+    if not resume_text or not isinstance(resume_text, str):
+        return ATSResult(ats_score=0.0, matched_skills=[], missing_skills=[], suggestions=["Resume text is empty."])
+
+    details = details or {}
+    resume_lower = resume_text.lower()
+    job_desc = (job_description or "").strip()
+
+    # Resume skills: from extracted tech_stack + skills found in full text
+    tech_stack = details.get("tech_stack") or []
+    resume_skills_set = set(_normalize_skill(s) for s in tech_stack if s)
+    for skill in _extract_skills_from_text(resume_text, JOB_DESC_SKILLS):
+        resume_skills_set.add(skill)
+
+    # Normalize for display (title case for matched/missing)
+    def _title(s: str) -> str:
+        return s.strip().title() if s else ""
+
+    if not job_desc:
+        # No job description: score from resume completeness only, no missing skills
+        required_skills = []
+        job_req = {}
+    else:
+        job_req = _extract_required_from_job_description(job_desc)
+        required_skills = job_req.get("required_skills") or []
+
+    matched_skills = []
+    missing_skills = []
+    for req in required_skills:
+        req_n = _normalize_skill(req)
+        if any(req_n in r or r in req_n for r in resume_skills_set):
+            matched_skills.append(_title(req))
+        else:
+            missing_skills.append(_title(req))
+
+    # Skills match: 40%
+    if required_skills:
+        skills_pct = min(100.0, 100.0 * len(matched_skills) / len(required_skills))
+    else:
+        skills_pct = 100.0 if resume_skills_set else 50.0
+
+    # Experience match: 25% (has experience entries + relevance)
+    experience_entries = details.get("experience") or []
+    experience_text = " ".join(experience_entries).lower() if experience_entries else resume_lower
+    has_experience = len(experience_entries) >= 1
+    exp_keywords = job_req.get("experience_keywords") or []
+    exp_relevance = sum(1 for k in exp_keywords if k in experience_text)
+    if has_experience:
+        experience_pct = 60.0 + min(40.0, 20.0 * len(experience_entries) + 10.0 * exp_relevance)
+    else:
+        experience_pct = 20.0  # low if no structured experience
+    experience_pct = min(100.0, experience_pct)
+
+    # Education match: 15%
+    education_lines = _extract_education_from_resume(resume_text)
+    edu_text = " ".join(education_lines).lower() if education_lines else resume_lower
+    edu_keywords = job_req.get("education_keywords") or []
+    if education_lines:
+        edu_match = sum(1 for k in EDUCATION_DEGREE_KEYWORDS if k in edu_text)
+        education_pct = 50.0 + min(50.0, edu_match * 15.0) if edu_keywords else 80.0
+    else:
+        education_pct = 30.0 if edu_keywords else 70.0
+    education_pct = min(100.0, education_pct)
+
+    # Keyword match: 20%
+    general_keywords = job_req.get("general_keywords") or []
+    if general_keywords:
+        kw_found = sum(1 for k in general_keywords if k in resume_lower)
+        keyword_pct = 100.0 * kw_found / len(general_keywords)
+    else:
+        keyword_pct = 70.0
+    keyword_pct = min(100.0, keyword_pct)
+
+    # Weighted score
+    ats_score = round(
+        (skills_pct * 0.40) + (experience_pct * 0.25) + (education_pct * 0.15) + (keyword_pct * 0.20),
+        1,
+    )
+    ats_score = max(0.0, min(100.0, ats_score))
+
+    # Build suggestions
+    suggestions = []
+    if missing_skills:
+        suggestions.append(f"Include or highlight these skills: {', '.join(missing_skills[:5])}" + ("..." if len(missing_skills) > 5 else ""))
+    if not has_experience and job_desc:
+        suggestions.append("Add a clear Experience section with role, company, and key responsibilities.")
+    if education_lines and edu_keywords and not any(k in edu_text for k in edu_keywords):
+        suggestions.append("Highlight education level that matches the job requirement (e.g. degree type).")
+    if not education_lines and edu_keywords:
+        suggestions.append("Add an Education section with degree and institution.")
+    if ats_score < 70 and not suggestions:
+        suggestions.append("Add more projects and measurable achievements relevant to the role.")
+    if not suggestions:
+        suggestions.append("Resume is well aligned with the job description.")
+
+    return ATSResult(
+        ats_score=ats_score,
+        matched_skills=matched_skills,
+        missing_skills=missing_skills,
+        suggestions=suggestions,
+    )
 
 
 def compute_ats_score(resume_text: str, job_role: str = "") -> float:

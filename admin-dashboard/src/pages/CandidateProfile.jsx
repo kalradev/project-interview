@@ -9,25 +9,23 @@ function formatDate(d) {
   return new Date(d).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
 }
 
+function formatDuration(startedAt, endedAt) {
+  if (!startedAt || !endedAt) return null
+  const start = new Date(startedAt).getTime()
+  const end = new Date(endedAt).getTime()
+  const mins = Math.round((end - start) / 60000)
+  if (mins < 60) return `${mins} min`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m ? `${h}h ${m}min` : `${h}h`
+}
+
 /** Prefer real name; if missing or generic "Candidate", use email prefix. */
 function displayName(candidate) {
   const name = (candidate?.full_name || '').trim()
   if (name && name.toLowerCase() !== 'candidate') return name
   if (candidate?.email && candidate.email.includes('@')) return candidate.email.split('@')[0]
   return '—'
-}
-
-/** Whether we have any extracted resume data to show. */
-function hasExtractedData(c) {
-  return !!(
-    (c?.resume_text && c.resume_text.trim()) ||
-    (c?.resume_url && c.resume_url.trim()) ||
-    (c?.tech_stack?.length > 0) ||
-    (c?.links?.length > 0) ||
-    (c?.projects?.length > 0) ||
-    (c?.certificates?.length > 0) ||
-    (c?.experience?.length > 0)
-  )
 }
 
 export default function CandidateProfile() {
@@ -155,7 +153,14 @@ export default function CandidateProfile() {
               {candidate.ats_score != null && <p><strong>ATS score:</strong> {candidate.ats_score}</p>}
               <p><strong>Invited:</strong> {formatDate(candidate.invited_at)}</p>
               {candidate.tech_stack?.length > 0 && (
-                <p><strong>Tech stack:</strong> {candidate.tech_stack.join(', ')}</p>
+                <p className="tech-stack-wrap">
+                  <strong>Tech stack:</strong>
+                  <span className="tech-stack-pills">
+                    {candidate.tech_stack.map((tech, i) => (
+                      <span key={i} className="tech-stack-pill">{tech.trim()}</span>
+                    ))}
+                  </span>
+                </p>
               )}
               {candidate.links?.length > 0 && (
                 <p><strong>Links:</strong>{' '}
@@ -193,61 +198,25 @@ export default function CandidateProfile() {
           )}
         </section>
 
-        <section className="candidate-profile-card extracted-output-card">
-          <h2>Extracted from resume</h2>
-          {!hasExtractedData(candidate) ? (
-            <p className="no-extracted-msg">No resume data stored for this candidate. Add candidates via &quot;Add resume&quot; with pasted or uploaded resume to see extracted text and structured data here.</p>
-          ) : (
-            <>
-              {candidate.resume_url && (
-                <p className="extracted-resume-url">
-                  <strong>Resume URL:</strong>{' '}
-                  <a href={candidate.resume_url} target="_blank" rel="noopener noreferrer">{candidate.resume_url}</a>
-                </p>
+        {(candidate.ats_details?.matched_skills?.length > 0 || candidate.ats_details?.missing_skills?.length > 0 || candidate.ats_details?.suggestions?.length > 0) && (
+          <section className="candidate-profile-card candidate-ats-card">
+            <h2>ATS analysis</h2>
+            <div className="candidate-ats-details">
+              {candidate.ats_details.matched_skills?.length > 0 && (
+                <p><strong>Matched skills:</strong> {candidate.ats_details.matched_skills.join(', ')}</p>
               )}
-              {candidate.resume_text?.trim() && (
-                <div className="extracted-resume-text-wrap">
-                  <strong>Resume text (parsed / pasted)</strong>
-                  <pre className="extracted-resume-text">{candidate.resume_text}</pre>
-                </div>
+              {candidate.ats_details.missing_skills?.length > 0 && (
+                <p><strong>Missing skills:</strong> {candidate.ats_details.missing_skills.join(', ')}</p>
               )}
-              {!candidate.resume_text?.trim() && !candidate.resume_url?.trim() && (
-                <p className="extracted-structured-only">Structured extract only (no raw resume text stored):</p>
+              {candidate.ats_details.suggestions?.length > 0 && (
+                <>
+                  <p><strong>Suggestions:</strong></p>
+                  <ul>{candidate.ats_details.suggestions.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                </>
               )}
-              {candidate.tech_stack?.length > 0 && (
-                <div className="extracted-field">
-                  <strong>Tech stack:</strong> {candidate.tech_stack.join(', ')}
-                </div>
-              )}
-              {candidate.links?.length > 0 && (
-                <div className="extracted-field">
-                  <strong>Links:</strong>{' '}
-                  {candidate.links.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">{url}</a>
-                  ))}
-                </div>
-              )}
-              {candidate.projects?.length > 0 && (
-                <div className="extracted-field">
-                  <strong>Projects:</strong>
-                  <ul>{candidate.projects.map((p, i) => <li key={i}>{p}</li>)}</ul>
-                </div>
-              )}
-              {candidate.certificates?.length > 0 && (
-                <div className="extracted-field">
-                  <strong>Certificates:</strong>
-                  <ul>{candidate.certificates.map((cert, i) => <li key={i}>{cert}</li>)}</ul>
-                </div>
-              )}
-              {candidate.experience?.length > 0 && (
-                <div className="extracted-field">
-                  <strong>Experience:</strong>
-                  <ul>{candidate.experience.map((e, i) => <li key={i}>{e}</li>)}</ul>
-                </div>
-              )}
-            </>
-          )}
-        </section>
+            </div>
+          </section>
+        )}
 
         <section className="candidate-profile-card interview-report-card">
           <h2>Interview &amp; report</h2>
@@ -256,8 +225,18 @@ export default function CandidateProfile() {
           ) : (
             <>
               <p><strong>Job role (interview):</strong> {report.job_role}</p>
-              {report.started_at && <p><strong>Started:</strong> {formatDate(report.started_at)}</p>}
-              {report.ended_at && <p><strong>Ended:</strong> {formatDate(report.ended_at)}</p>}
+
+              <div className="report-timing-block">
+                <h4>Interview timing</h4>
+                {candidate.interview_scheduled_at && (
+                  <p><strong>Scheduled:</strong> {formatDate(candidate.interview_scheduled_at)}</p>
+                )}
+                {report.started_at && <p><strong>Started:</strong> {formatDate(report.started_at)}</p>}
+                {report.ended_at && <p><strong>Ended:</strong> {formatDate(report.ended_at)}</p>}
+                {formatDuration(report.started_at, report.ended_at) && (
+                  <p><strong>Duration:</strong> {formatDuration(report.started_at, report.ended_at)}</p>
+                )}
+              </div>
 
               {report.agent_report && (
                 <div className="report-agent-block">

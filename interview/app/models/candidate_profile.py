@@ -51,6 +51,7 @@ class CandidateProfile(Base):
     experience: Mapped[list | None] = mapped_column(JSONB, nullable=True)  # Experience entries
     source: Mapped[str] = mapped_column(String(64), default="manual", nullable=False)  # naukri, manual, csv, platform
     ats_score: Mapped[float | None] = mapped_column(Float, nullable=True)  # ATS score from platform; shortlist if >= 85
+    ats_details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # { matched_skills, missing_skills, suggestions }
     resume_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     resume_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     interview_scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

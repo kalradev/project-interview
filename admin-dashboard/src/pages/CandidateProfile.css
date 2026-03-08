@@ -38,6 +38,8 @@
   flex-wrap: wrap;
   gap: 1rem;
   padding: 1rem 0;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .candidate-profile-header h1 {
@@ -57,8 +59,11 @@
   position: relative;
   z-index: 1;
   flex: 1;
-  padding: 0 1.5rem 2rem;
-  max-width: 720px;
+  padding: 0 1.5rem 2.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .candidate-profile-loading,
@@ -76,92 +81,164 @@
 }
 
 .candidate-profile-card {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
-  padding: 1.75rem;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.04);
+  padding: 1.75rem 2rem;
   margin-bottom: 1.5rem;
-  border: 1px solid rgba(221, 228, 236, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.9);
   animation: cardSlideUp 0.4s var(--ease-out) both;
 }
 
 .candidate-profile-card h2 {
-  margin: 0 0 1rem;
-  font-size: 1.125rem;
+  margin: 0 0 1.25rem;
+  font-size: 1.0625rem;
   font-weight: 700;
   color: var(--color-text);
+  letter-spacing: -0.01em;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
+/* Photo + details: compact grid so text isn’t pushed far right */
 .candidate-details-grid {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 112px 1fr;
   gap: 1.5rem;
   align-items: start;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+  .candidate-details-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }
 
 .candidate-photo-block {
   flex-shrink: 0;
 }
 
-.candidate-profile-photo {
-  width: 100px;
-  height: 100px;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-}
-
+.candidate-profile-photo,
 .candidate-profile-photo-placeholder {
   width: 100px;
   height: 100px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  display: block;
+}
+
+.candidate-profile-photo {
+  object-fit: cover;
+}
+
+.candidate-profile-photo-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-subtle);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  background: linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%);
   font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--color-text-muted);
 }
 
+.candidate-details-fields {
+  min-width: 0;
+}
+
 .candidate-details-fields p {
-  margin: 0.35rem 0;
+  margin: 0.5rem 0;
   font-size: 0.9375rem;
+  line-height: 1.5;
   color: var(--color-text);
+}
+
+.candidate-details-fields p strong {
+  display: inline-block;
+  min-width: 5.5em;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-right: 0.25rem;
 }
 
 .candidate-details-fields a {
   color: var(--color-primary);
   word-break: break-all;
+  text-decoration: none;
 }
 
+.candidate-details-fields a:hover {
+  text-decoration: underline;
+}
+
+.tech-stack-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tech-stack-wrap strong {
+  min-width: auto;
+}
+
+.tech-stack-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tech-stack-pill {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+/* Projects, Certificates, Experience – clear sub-sections */
 .candidate-detail-block {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
+  margin-top: 1.25rem;
+  padding: 1.25rem 1rem;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .candidate-detail-block strong {
   display: block;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
   font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: 0.02em;
 }
 
 .candidate-detail-block ul {
   margin: 0;
   padding-left: 1.25rem;
   font-size: 0.9rem;
+  line-height: 1.6;
   color: var(--color-text);
+}
+
+.candidate-detail-block li {
+  margin-bottom: 0.35rem;
+}
+
+.candidate-detail-block li:last-child {
+  margin-bottom: 0;
 }
 
 .candidate-actions-row {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
   border-top: 1px solid var(--color-border);
 }
 
@@ -228,7 +305,40 @@
   padding: 0;
 }
 
+.candidate-ats-card .candidate-ats-details {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.candidate-ats-card .candidate-ats-details p {
+  margin: 0 0 0.6rem;
+}
+.candidate-ats-card .candidate-ats-details ul {
+  margin: 0.25rem 0 0 1.25rem;
+  padding: 0;
+}
+
 /* Reuse report styles from Dashboard */
+.report-timing-block {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.report-timing-block h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.report-timing-block p {
+  margin: 0.35rem 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
 .report-agent-block {
   margin-top: 1rem;
   padding: 0.85rem 1rem;
@@ -333,10 +443,11 @@
 
 .status-badge {
   display: inline-block;
-  padding: 0.2rem 0.5rem;
+  padding: 0.28rem 0.65rem;
   border-radius: 999px;
   font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .status-invited { background: #dbeafe; color: #1e40af; }

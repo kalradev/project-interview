@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getToken, logout } from '../App'
 import { listCandidates, addCandidate, getReport, candidateAction, deleteCandidate, extractResumeDetails, extractResumeFromFile, apiBase } from '../api'
+import Orb from '../components/Orb'
 import './Dashboard.css'
 
 function formatDate(d) {
@@ -33,6 +34,10 @@ export default function Dashboard() {
   const [formCertificates, setFormCertificates] = useState('')
   const [formExperience, setFormExperience] = useState([]) // string[]: one item per experience entry
   const [formAtsScore, setFormAtsScore] = useState(null) // ATS score 0–100 from extract (null until extracted)
+  const [formJobDescription, setFormJobDescription] = useState('') // Optional job description for ATS scoring
+  const [formMatchedSkills, setFormMatchedSkills] = useState([])
+  const [formMissingSkills, setFormMissingSkills] = useState([])
+  const [formSuggestions, setFormSuggestions] = useState([])
   const [sendInvite, setSendInvite] = useState(true) // Toggle: admin decides to take interview
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formExtractLoading, setFormExtractLoading] = useState(false)
@@ -73,6 +78,9 @@ export default function Dashboard() {
     setFormCertificates('')
     setFormExperience([])
     setFormAtsScore(null)
+    setFormMatchedSkills([])
+    setFormMissingSkills([])
+    setFormSuggestions([])
   }
 
   function fillFormFromExtract(data) {
@@ -89,6 +97,9 @@ export default function Dashboard() {
     setFormExperience(Array.isArray(data.experience) ? data.experience : (data.experience ? [data.experience] : []))
     if (data.resume_text) setFormResumeText(data.resume_text)
     setFormAtsScore(typeof data.ats_score === 'number' ? data.ats_score : null)
+    setFormMatchedSkills(Array.isArray(data.matched_skills) ? data.matched_skills : [])
+    setFormMissingSkills(Array.isArray(data.missing_skills) ? data.missing_skills : [])
+    setFormSuggestions(Array.isArray(data.suggestions) ? data.suggestions : [])
     setFormExtractSuccess(true)
   }
 
@@ -102,7 +113,7 @@ export default function Dashboard() {
     setFormExtractSuccess(false)
     clearExtractedFormFields()
     try {
-      const data = await extractResumeDetails(token, formResumeText)
+      const data = await extractResumeDetails(token, formResumeText, formJobDescription)
       fillFormFromExtract(data)
     } catch (err) {
       setError(err.message || 'Extract failed')
@@ -121,7 +132,7 @@ export default function Dashboard() {
     setFormExtractSuccess(false)
     clearExtractedFormFields()
     try {
-      const data = await extractResumeFromFile(getToken(), formUploadedFile)
+      const data = await extractResumeFromFile(getToken(), formUploadedFile, formJobDescription)
       fillFormFromExtract(data)
       setFormUploadedFile(null)
     } catch (err) {
@@ -159,11 +170,15 @@ export default function Dashboard() {
         experience: formExperience.length ? formExperience.map((s) => s.trim()).filter(Boolean) : undefined,
         source: 'manual',
         send_email: sendInvite,
+        ats_score: formAtsScore != null ? formAtsScore : undefined,
+        matched_skills: formMatchedSkills?.length ? formMatchedSkills : undefined,
+        missing_skills: formMissingSkills?.length ? formMissingSkills : undefined,
+        suggestions: formSuggestions?.length ? formSuggestions : undefined,
       })
-      if (sendInvite && res.email_sent === false) {
+      if (res.email_sent === false && (sendInvite || (formAtsScore != null && formAtsScore > 60))) {
         setFormSuccess('Candidate added but invite email could not be sent. Check Brevo/SMTP in server .env.')
-      } else if (sendInvite) {
-        setFormSuccess('Candidate added and invite email sent.')
+      } else if (res.email_sent) {
+        setFormSuccess('Candidate added and invite email sent to ' + formEmail + '.')
       } else {
         setFormSuccess('Candidate added. No invite sent.')
       }
@@ -181,6 +196,9 @@ export default function Dashboard() {
       setFormCertificates('')
       setFormExperience([])
       setFormAtsScore(null)
+      setFormMatchedSkills([])
+      setFormMissingSkills([])
+      setFormSuggestions([])
       setFormUploadedFile(null)
       setFormExtractSuccess(false)
       setShowForm(false)
@@ -262,18 +280,52 @@ export default function Dashboard() {
             Upload a resume (PDF/DOCX), then click Extract. The form will be filled automatically; edit any field and save to database.
           </p>
 
-          {(formExtractLoading || formExtractFileLoading) && (
-            <div className="extraction-loading" role="status" aria-label="Extracting resume details">
-              <div className="extraction-loading-bar" />
-              <p className="extraction-loading-text">Extracting details from resume…</p>
-            </div>
-          )}
-
           {formExtractSuccess && !formExtractLoading && !formExtractFileLoading && (
-            <p className="form-extract-success">Details extracted. Edit the fields below if needed, then click Add candidate to save.</p>
+            <>
+              <p className="form-extract-success">Details extracted. Edit the fields below if needed, then click Add candidate to save.</p>
+              {formAtsScore != null && (
+                <div className="form-ats-details">
+                  <div className="form-ats-block">
+                    <span className="form-ats-label">ATS score (calculated after extract)</span>
+                    <span className="form-ats-value">{Number(formAtsScore).toFixed(1)}%</span>
+                  </div>
+                  {(formMatchedSkills.length > 0 || formMissingSkills.length > 0) && (
+                    <div className="form-ats-skills">
+                      {formMatchedSkills.length > 0 && (
+                        <p className="form-ats-skills-row">
+                          <strong>Matched skills:</strong> {formMatchedSkills.join(', ')}
+                        </p>
+                      )}
+                      {formMissingSkills.length > 0 && (
+                        <p className="form-ats-skills-row form-ats-missing">
+                          <strong>Missing skills:</strong> {formMissingSkills.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {formSuggestions.length > 0 && (
+                    <ul className="form-ats-suggestions">
+                      {formSuggestions.map((s, i) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           <form onSubmit={handleAddResume}>
+            <label className="form-job-desc-label">
+              Job description (optional — for ATS scoring)
+              <textarea
+                className="form-job-desc-input"
+                value={formJobDescription}
+                onChange={(e) => setFormJobDescription(e.target.value)}
+                placeholder="Paste the job description here to get dynamic ATS score, matched/missing skills, and improvement suggestions."
+                rows={3}
+              />
+            </label>
             <div className="upload-row">
               <label className="upload-label">
                 Upload resume (PDF or DOCX)
@@ -336,7 +388,7 @@ export default function Dashboard() {
               </label>
             </div>
             {formAtsScore != null && (
-              <p className="form-ats-score">
+              <p className="form-ats-score form-ats-inline">
                 <strong>ATS score:</strong> {Number(formAtsScore).toFixed(1)}%
               </p>
             )}
@@ -419,29 +471,33 @@ export default function Dashboard() {
               />
             </label>
 
-            <div className="form-section">
-              <span className="form-section-label">Experience — one column per entry</span>
-              {(formExperience.length === 0 ? [''] : formExperience).map((text, i) => (
-                <div key={i} className="form-experience-row">
-                  <label>
-                    Experience {i + 1}
+            <div className="form-section form-section-experience">
+              <span className="form-section-label">Experience — one entry per card</span>
+              <div className="form-experience-list">
+                {(formExperience.length === 0 ? [''] : formExperience).map((text, i) => (
+                  <div key={i} className="form-experience-card">
+                    <div className="form-experience-card-header">
+                      <span className="form-experience-card-title">Experience {i + 1}</span>
+                      <button type="button" className="btn btn-outline btn-remove" onClick={() => setFormExperience(formExperience.length ? formExperience.filter((_, j) => j !== i) : [])}>
+                        Remove
+                      </button>
+                    </div>
                     <textarea
+                      className="form-experience-textarea"
                       value={text}
                       onChange={(e) => {
                         const next = [...(formExperience.length ? formExperience : [''])]
                         next[i] = e.target.value
                         setFormExperience(next)
                       }}
-                      placeholder="Role, company, duration — one entry per column"
-                      rows={3}
+                      placeholder={'e.g. Software Developer | Company Name | Jun 2024 – Present | Location\n\n• Key responsibility or achievement\n• Another point...'}
+                      rows={6}
+                      aria-label={`Experience ${i + 1}`}
                     />
-                  </label>
-                  <button type="button" className="btn btn-outline btn-remove" onClick={() => setFormExperience(formExperience.length ? formExperience.filter((_, j) => j !== i) : [])}>
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button type="button" className="btn btn-outline" onClick={() => setFormExperience([...(formExperience.length ? formExperience : []), ''])}>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="btn btn-outline form-experience-add" onClick={() => setFormExperience([...(formExperience.length ? formExperience : []), ''])}>
                 Add experience
               </button>
             </div>
@@ -520,6 +576,7 @@ export default function Dashboard() {
                   <th>ATS</th>
                   <th>Status</th>
                   <th>Invited</th>
+                  <th>Interview</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -539,6 +596,7 @@ export default function Dashboard() {
                     <td>{c.ats_score != null ? c.ats_score : '—'}</td>
                     <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
                     <td>{formatDate(c.invited_at)}</td>
+                    <td>{c.interview_scheduled_at ? formatDate(c.interview_scheduled_at) : '—'}</td>
                     <td className="actions-cell">
                       <div className="actions-buttons">
                         <Link to={`/dashboard/candidates/${c.id}`} className="btn-action btn-action-profile" title="View full profile">
@@ -547,7 +605,7 @@ export default function Dashboard() {
                         <button type="button" className="btn-action btn-action-report" onClick={() => openReport(c.id)} title="View report">
                           Report
                         </button>
-                        {(c.status === 'completed' || c.status === 'invited') && (
+                        {(c.status === 'completed' || c.status === 'next_round') && (
                           <>
                             <button type="button" className="btn-action btn-action-next" onClick={() => handleAction(c.id, 'next_round')} title="Advance to next round">
                               Next round
@@ -674,6 +732,21 @@ export default function Dashboard() {
         </div>
       )}
       </main>
+
+      {(formExtractLoading || formExtractFileLoading) && (
+        <div className="extraction-loading-fullscreen" role="status" aria-label="Extracting resume details">
+          <div className="extraction-orb-wrap">
+            <Orb
+              hoverIntensity={2}
+              rotateOnHover
+              hue={0}
+              forceHoverState={false}
+              backgroundColor="#0f172a"
+            />
+          </div>
+          <p className="extraction-loading-text extraction-loading-text-overlay">Extracting details from resume…</p>
+        </div>
+      )}
     </div>
   )
 }

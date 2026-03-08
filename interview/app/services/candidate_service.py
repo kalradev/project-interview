@@ -4,6 +4,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,25 @@ from app.auth.password import hash_password as _hash_password
 def _generate_password() -> str:
     """Generate a random temporary password for the candidate."""
     return secrets.token_urlsafe(12)
+
+
+def _next_interview_slot_utc() -> datetime:
+    """Return next available interview slot in the configured window (e.g. 11:00 AM–5:00 PM) as UTC."""
+    settings = get_settings()
+    tz_name = getattr(settings, "interview_timezone", "UTC") or "UTC"
+    start_hour = getattr(settings, "interview_window_start_hour", 11)
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        tz = timezone.utc
+    now = datetime.now(tz)
+    # Next slot: today at start_hour if we're before start_hour; otherwise tomorrow at start_hour
+    today_start = now.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+    if now < today_start:
+        slot_local = today_start
+    else:
+        slot_local = today_start + timedelta(days=1)
+    return slot_local.astimezone(timezone.utc)
 
 
 async def add_candidate(
@@ -37,6 +57,7 @@ async def add_candidate(
     interview_scheduled_at: datetime | None = None,
     send_email: bool = True,
     ats_score: float | None = None,
+    ats_details: dict | None = None,
 ) -> tuple[User, CandidateProfile, str, bool, str]:
     """
     Create a candidate user and profile, optionally send invite email.
@@ -65,8 +86,8 @@ async def add_candidate(
     await db.flush()
 
     if interview_scheduled_at is None:
-        # Default: tomorrow same time or 24h from now
-        interview_scheduled_at = datetime.now(timezone.utc) + timedelta(days=1)
+        # Default: next slot in configured window (e.g. 11:00 AM–5:00 PM)
+        interview_scheduled_at = _next_interview_slot_utc()
 
     profile = CandidateProfile(
         user_id=user.id,
@@ -83,6 +104,7 @@ async def add_candidate(
         status=CandidateStatus.INVITED.value,
         invited_at=datetime.now(timezone.utc),
         ats_score=ats_score,
+        ats_details=ats_details,
     )
     db.add(profile)
     await db.flush()

@@ -2,15 +2,53 @@
 
 import logging
 import smtplib
-from datetime import datetime
+from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from zoneinfo import ZoneInfo
 
 import httpx
 
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _format_interview_time_local(interview_scheduled_at: datetime | None) -> str:
+    """Format interview time in the configured interview timezone (e.g. Asia/Kolkata) so the email shows the correct local time."""
+    if not interview_scheduled_at:
+        return "within 1–2 days (you will receive a reminder with exact time)"
+    dt = interview_scheduled_at
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    settings = get_settings()
+    tz_name = getattr(settings, "interview_timezone", "UTC") or "UTC"
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        tz = timezone.utc
+    local_dt = dt.astimezone(tz)
+    # e.g. "08 March 2026 at 11:00 AM IST"
+    time_str = local_dt.strftime("%d %B %Y at %I:%M %p")
+    tz_abbr = local_dt.strftime("%Z")
+    if tz_abbr and tz_abbr.strip():
+        time_str = f"{time_str} {tz_abbr.strip()}"
+    return time_str
+
+
+def _interview_window_text() -> str:
+    """Return human-readable interview window from config (e.g. '11:00 AM–5:00 PM')."""
+    s = get_settings()
+    start = getattr(s, "interview_window_start_hour", 11)
+    end = getattr(s, "interview_window_end_hour", 17)
+
+    def _hour_str(h: int) -> str:
+        h12 = 12 if (h % 12) == 0 else (h % 12)
+        period = "PM" if h >= 12 else "AM"
+        return f"{h12}:00 {period}"
+
+    return f"{_hour_str(start)}–{_hour_str(end)}"
+
 
 # Brand colors for email (professional blue palette)
 EMAIL_PRIMARY = "#0369a1"
@@ -29,11 +67,7 @@ def _build_invite_plain(
     candidate_name: str | None,
 ) -> str:
     """Return plain-text body."""
-    time_str = (
-        interview_scheduled_at.strftime("%d %B %Y at %I:%M %p")
-        if interview_scheduled_at
-        else "within 1–2 days (you will receive a reminder with exact time)"
-    )
+    time_str = _format_interview_time_local(interview_scheduled_at)
     name = candidate_name or "Candidate"
     return f"""Hello {name},
 
@@ -45,6 +79,7 @@ LOGIN CREDENTIALS
 
 INTERVIEW TIMING
 {time_str}
+(Interviews are scheduled between {_interview_window_text()}.)
 
 SETUP (Interview Agent app)
 1. Download and install the Interview Agent from: {setup_download_url}
@@ -66,11 +101,7 @@ def _build_invite_html(
     candidate_name: str | None,
 ) -> str:
     """Return professional HTML body (inline styles for email clients)."""
-    time_str = (
-        interview_scheduled_at.strftime("%d %B %Y at %I:%M %p")
-        if interview_scheduled_at
-        else "within 1–2 days (you will receive a reminder with the exact time)"
-    )
+    time_str = _format_interview_time_local(interview_scheduled_at)
     name = candidate_name or "Candidate"
 
     return f"""<!DOCTYPE html>
@@ -124,6 +155,7 @@ def _build_invite_html(
             <td style="padding: 0 32px 16px;">
               <p style="margin: 0 0 6px; font-size: 12px; font-weight: 700; color: {EMAIL_MUTED}; text-transform: uppercase; letter-spacing: 0.04em;">Interview timing</p>
               <p style="margin: 0; font-size: 15px; color: {EMAIL_TEXT}; font-weight: 500;">{time_str}</p>
+              <p style="margin: 6px 0 0; font-size: 13px; color: {EMAIL_MUTED};">Interviews are scheduled between {_interview_window_text()}.</p>
             </td>
           </tr>
           <!-- Setup steps -->
