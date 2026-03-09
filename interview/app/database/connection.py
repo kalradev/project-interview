@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
@@ -41,6 +42,29 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Create tables if they do not exist. For production use Alembic migrations."""
+    """Create enum types and tables if they do not exist. For production use Alembic migrations."""
     async with async_engine.begin() as conn:
+        # Create PostgreSQL enum types first (required before tables that use them)
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                CREATE TYPE public.userrole AS ENUM ('admin', 'interviewer', 'candidate');
+            EXCEPTION
+                WHEN duplicate_object THEN NULL;
+            END $$;
+            """)
+        )
+        await conn.execute(
+            text("""
+            DO $$ BEGIN
+                CREATE TYPE public.eventtype AS ENUM (
+                    'tab_switch', 'paste_event', 'copy_event', 'devtools_detection',
+                    'idle_time', 'burst_typing', 'instant_large_input', 'webcam_anomaly'
+                );
+            EXCEPTION
+                WHEN duplicate_object THEN NULL;
+            END $$;
+            """)
+        )
+        # Now create all tables
         await conn.run_sync(Base.metadata.create_all)
