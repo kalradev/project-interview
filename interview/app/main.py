@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "password" in err_msg
             or "connection" in err_msg
             or "refused" in err_msg
+            or "timeout" in err_msg
             or (type(e).__module__ == "asyncpg.exceptions")
         ):
             logger.warning(
@@ -37,7 +38,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 e,
             )
         else:
-            raise
+            logger.warning(
+                "Database initialization failed: %s. "
+                "Server starting anyway; API requests that need the DB will fail.",
+                e,
+            )
     yield
 
 

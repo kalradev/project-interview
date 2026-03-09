@@ -74,6 +74,55 @@ async def register(
     return user
 
 
+@router.post("/init-admin", status_code=status.HTTP_200_OK)
+async def init_admin(
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Initialize admin user (admin@example.com / admin123). 
+    Creates if doesn't exist, resets password if exists.
+    Safe to call multiple times."""
+    ADMIN_EMAIL = "admin@example.com"
+    ADMIN_PASSWORD = "admin123"
+    
+    try:
+        result = await db.execute(select(User).where(User.email == ADMIN_EMAIL))
+        user = result.scalar_one_or_none()
+        
+        if user:
+            # Reset password if user exists
+            user.hashed_password = hash_password(ADMIN_PASSWORD)
+            user.is_active = True
+            await db.commit()
+            return {
+                "message": f"Admin user password reset successfully",
+                "email": ADMIN_EMAIL,
+                "password": ADMIN_PASSWORD
+            }
+        else:
+            # Create new admin user
+            user = User(
+                email=ADMIN_EMAIL,
+                hashed_password=hash_password(ADMIN_PASSWORD),
+                full_name="Admin",
+                role=UserRole.ADMIN,
+                is_active=True,
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            return {
+                "message": "Admin user created successfully",
+                "email": ADMIN_EMAIL,
+                "password": ADMIN_PASSWORD
+            }
+    except Exception as e:
+        logger.exception("Failed to initialize admin: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to initialize admin user: {str(e)}",
+        )
+
+
 @router.post("/login", response_model=Token)
 async def login(
     payload: LoginRequest,

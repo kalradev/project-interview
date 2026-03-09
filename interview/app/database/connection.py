@@ -1,5 +1,7 @@
 """Async database connection and session management."""
 
+import asyncio
+import logging
 from collections.abc import AsyncGenerator
 
 from sqlalchemy import text
@@ -7,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config import get_settings
 from app.database.base import Base
+
+logger = logging.getLogger(__name__)
 
 # Import models so they are registered with Base.metadata
 from app import models  # noqa: F401
@@ -43,6 +47,19 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Create enum types and tables if they do not exist. For production use Alembic migrations."""
+    try:
+        # Add timeout to prevent hanging (30 seconds)
+        await asyncio.wait_for(_init_db_internal(), timeout=30.0)
+    except asyncio.TimeoutError:
+        logger.error("Database initialization timed out after 30 seconds. Check database connection.")
+        raise
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        raise
+
+
+async def _init_db_internal() -> None:
+    """Internal function to create enum types and tables."""
     async with async_engine.begin() as conn:
         # Create PostgreSQL enum types first (required before tables that use them)
         await conn.execute(
