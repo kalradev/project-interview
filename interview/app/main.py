@@ -1,6 +1,7 @@
 """FastAPI application entry point."""
 
 import logging
+import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -9,12 +10,50 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import select, text as sql_text
 
 from app.config import get_settings
-from app.database import init_db
+from app.database import init_db, get_async_session
+from app.models.user import User
+from app.auth.password import hash_password
 from app.routes import auth, sessions, events, integrity, interview, websocket_router, admin_candidates, admin_resumes, candidate
 
 logger = logging.getLogger(__name__)
+
+
+async def _ensure_admin_user() -> None:
+    """Ensure admin user exists. Creates it if missing."""
+    ADMIN_EMAIL = "admin@example.com"
+    ADMIN_PASSWORD = "admin123"
+    
+    try:
+        async for db in get_async_session():
+            result = await db.execute(select(User).where(User.email == ADMIN_EMAIL))
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                # Create admin user using raw SQL to avoid TypeDecorator issues
+                user_id = uuid.uuid4()
+                hashed_pwd = hash_password(ADMIN_PASSWORD)
+                await db.execute(
+                    sql_text("""
+                        INSERT INTO users (id, email, hashed_password, full_name, role, is_active, created_at, updated_at)
+                        VALUES (:id::uuid, :email, :hashed_password, :full_name, :role::userrole, :is_active, NOW(), NOW())
+                    """),
+                    {
+                        "id": str(user_id),
+                        "email": ADMIN_EMAIL,
+                        "hashed_password": hashed_pwd,
+                        "full_name": "Admin",
+                        "role": "ADMIN",
+                        "is_active": True
+                    }
+                )
+                await db.commit()
+                logger.info(f"Admin user created automatically: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
+            break
+    except Exception as e:
+        logger.warning(f"Failed to ensure admin user exists: {e}")
 
 
 @asynccontextmanager
@@ -22,6 +61,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: startup and shutdown."""
     try:
         await init_db()
+        # Automatically create admin user if it doesn't exist
+        await _ensure_admin_user()
     except Exception as e:
         err_msg = str(e).lower()
         if (
