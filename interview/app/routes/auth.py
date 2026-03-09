@@ -118,7 +118,6 @@ async def init_admin(
                 }
             )
             await db.commit()
-            await db.refresh(user)
             return {
                 "message": "Admin user created successfully",
                 "email": ADMIN_EMAIL,
