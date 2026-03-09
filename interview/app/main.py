@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text as sql_text
 
 from app.config import get_settings
-from app.database import init_db, get_async_session
+from app.database import init_db
 from app.models.user import User
 from app.auth.password import hash_password
 from app.routes import auth, sessions, events, integrity, interview, websocket_router, admin_candidates, admin_resumes, candidate
@@ -23,11 +23,13 @@ logger = logging.getLogger(__name__)
 
 async def _ensure_admin_user() -> None:
     """Ensure admin user exists. Creates it if missing."""
+    from app.database import async_session_factory
+    
     ADMIN_EMAIL = "admin@example.com"
     ADMIN_PASSWORD = "admin123"
     
     try:
-        async for db in get_async_session():
+        async with async_session_factory() as db:
             result = await db.execute(select(User).where(User.email == ADMIN_EMAIL))
             user = result.scalar_one_or_none()
             
@@ -51,7 +53,6 @@ async def _ensure_admin_user() -> None:
                 )
                 await db.commit()
                 logger.info(f"Admin user created automatically: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
-            break
     except Exception as e:
         logger.warning(f"Failed to ensure admin user exists: {e}")
 
