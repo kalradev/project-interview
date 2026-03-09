@@ -1,9 +1,10 @@
 """Auth routes - login, register, JWT."""
 
 import logging
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -99,15 +100,23 @@ async def init_admin(
                 "password": ADMIN_PASSWORD
             }
         else:
-            # Create new admin user
-            user = User(
-                email=ADMIN_EMAIL,
-                hashed_password=hash_password(ADMIN_PASSWORD),
-                full_name="Admin",
-                role=UserRole.ADMIN,  # Will be converted to 'ADMIN' by TypeDecorator
-                is_active=True,
+            # Create new admin user using raw SQL to bypass TypeDecorator issues
+            user_id = uuid.uuid4()
+            hashed_pwd = hash_password(ADMIN_PASSWORD)
+            await db.execute(
+                sql_text("""
+                    INSERT INTO users (id, email, hashed_password, full_name, role, is_active, created_at, updated_at)
+                    VALUES (:id::uuid, :email, :hashed_password, :full_name, :role::userrole, :is_active, NOW(), NOW())
+                """),
+                {
+                    "id": str(user_id),
+                    "email": ADMIN_EMAIL,
+                    "hashed_password": hashed_pwd,
+                    "full_name": "Admin",
+                    "role": "ADMIN",  # Direct uppercase string to match DB enum
+                    "is_active": True
+                }
             )
-            db.add(user)
             await db.commit()
             await db.refresh(user)
             return {
