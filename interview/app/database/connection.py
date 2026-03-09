@@ -65,7 +65,7 @@ async def _init_db_internal() -> None:
         await conn.execute(
             text("""
             DO $$ BEGIN
-                CREATE TYPE public.userrole AS ENUM ('admin', 'interviewer', 'candidate');
+                CREATE TYPE public.userrole AS ENUM ('ADMIN', 'INTERVIEWER', 'CANDIDATE');
             EXCEPTION
                 WHEN duplicate_object THEN NULL;
             END $$;
