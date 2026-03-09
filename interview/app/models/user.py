@@ -42,7 +42,7 @@ class _UserRoleType(TypeDecorator):
         if value is None:
             return None
         if isinstance(value, UserRole):
-            return value.name  # CANDIDATE so DB enum with uppercase labels accepts it
+            return value.value  # Use lowercase value ('admin') to match DB enum
         return value
 
     def process_result_value(self, value, dialect):
