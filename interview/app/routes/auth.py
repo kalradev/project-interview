@@ -100,12 +100,12 @@ async def init_admin(
             }
         else:
             # Create new admin user
-            # Use string directly to ensure lowercase value matches DB enum
+            # Use .value to get lowercase string that matches DB enum
             user = User(
                 email=ADMIN_EMAIL,
                 hashed_password=hash_password(ADMIN_PASSWORD),
                 full_name="Admin",
-                role="admin",  # Direct string to match DB enum (lowercase)
+                role=UserRole.ADMIN.value,  # Use .value to get 'admin' (lowercase)
                 is_active=True,
             )
             db.add(user)
