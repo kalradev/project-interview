@@ -19,12 +19,11 @@ class UserRole(str, PyEnum):
     CANDIDATE = "candidate"
 
 
-# PostgreSQL enum 'userrole' - if you see "invalid input value for enum userrole: 'candidate'",
-# the DB likely has uppercase labels; use name="userrole", values uppercase, create_type=False.
+# PostgreSQL enum 'userrole' - use lowercase to match DB (e.g. schema_fixed.sql or existing DBs).
 USERROLE_ENUM = ENUM(
-    "ADMIN",
-    "INTERVIEWER",
-    "CANDIDATE",
+    "admin",
+    "interviewer",
+    "candidate",
     name="userrole",
     create_type=False,
 )
@@ -42,7 +41,7 @@ class _UserRoleType(TypeDecorator):
         if value is None:
             return None
         if isinstance(value, UserRole):
-            return value.name  # Use uppercase name ('ADMIN') to match DB enum
+            return value.value  # Use lowercase to match DB enum ('admin', etc.)
         return value
 
     def process_result_value(self, value, dialect):

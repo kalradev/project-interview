@@ -39,6 +39,7 @@ export default function Dashboard() {
   const [formMissingSkills, setFormMissingSkills] = useState([])
   const [formSuggestions, setFormSuggestions] = useState([])
   const [sendInvite, setSendInvite] = useState(true) // Toggle: admin decides to take interview
+  const [formInterviewScheduledAt, setFormInterviewScheduledAt] = useState('') // Optional: interview date/time (datetime-local string, empty = next slot)
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formExtractLoading, setFormExtractLoading] = useState(false)
   const [formExtractFileLoading, setFormExtractFileLoading] = useState(false)
@@ -170,6 +171,7 @@ export default function Dashboard() {
         experience: formExperience.length ? formExperience.map((s) => s.trim()).filter(Boolean) : undefined,
         source: 'manual',
         send_email: sendInvite,
+        interview_scheduled_at: formInterviewScheduledAt ? new Date(formInterviewScheduledAt).toISOString() : undefined,
         ats_score: formAtsScore != null ? formAtsScore : undefined,
         matched_skills: formMatchedSkills?.length ? formMatchedSkills : undefined,
         missing_skills: formMissingSkills?.length ? formMissingSkills : undefined,
@@ -199,6 +201,7 @@ export default function Dashboard() {
       setFormMatchedSkills([])
       setFormMissingSkills([])
       setFormSuggestions([])
+      setFormInterviewScheduledAt('')
       setFormUploadedFile(null)
       setFormExtractSuccess(false)
       setShowForm(false)
@@ -501,6 +504,25 @@ export default function Dashboard() {
                 Add experience
               </button>
             </div>
+
+            {/* Interview date/time: when set, email shows this time; matches dashboard when INTERVIEW_TIMEZONE matches admin's zone */}
+            {sendInvite && (
+              <>
+                <div className="form-row">
+                  <label>
+                    Interview date &amp; time (optional)
+                    <input
+                      type="datetime-local"
+                      value={formInterviewScheduledAt}
+                      onChange={(e) => setFormInterviewScheduledAt(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
+                      title="Leave empty to use next available slot. This time will appear in the invite email and in the dashboard."
+                    />
+                  </label>
+                </div>
+                <p className="toggle-hint" style={{ marginTop: '-8px', marginBottom: 8 }}>Leave empty for next available slot. The time you set here is what the candidate will see in the email and in the dashboard.</p>
+              </>
+            )}
 
             {/* Toggles: add more entries here to show additional admin options */}
             <div className="toggles-section">
