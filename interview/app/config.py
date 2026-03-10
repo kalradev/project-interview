@@ -108,22 +108,34 @@ class Settings(BaseSettings):
     penalty_webcam_anomaly: int = 20
 
 
-def _to_async_url(url_str: str) -> str:
-    """Convert postgresql:// or postgres:// to postgresql+asyncpg://."""
-    if "postgresql+asyncpg://" in url_str:
+def _ensure_ssl_for_cloud(url_str: str) -> str:
+    """Append sslmode=require if not present (needed for Render, Supabase, etc.)."""
+    if "sslmode=" in url_str or "ssl=" in url_str:
         return url_str
-    if url_str.startswith("postgres://"):
-        return url_str.replace("postgres://", "postgresql+asyncpg://", 1)
-    if url_str.startswith("postgresql://"):
-        return url_str.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return url_str
+    sep = "&" if "?" in url_str else "?"
+    return f"{url_str}{sep}sslmode=require"
+
+
+def _to_async_url(url_str: str) -> str:
+    """Convert postgresql:// or postgres:// to postgresql+asyncpg://; add sslmode for cloud DBs."""
+    if "postgresql+asyncpg://" in url_str:
+        out = url_str
+    elif url_str.startswith("postgres://"):
+        out = url_str.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url_str.startswith("postgresql://"):
+        out = url_str.replace("postgresql://", "postgresql+asyncpg://", 1)
+    else:
+        out = url_str
+    return _ensure_ssl_for_cloud(out)
 
 
 def _to_sync_url(url_str: str) -> str:
-    """Ensure postgresql:// (sync) – strip +asyncpg if present."""
+    """Ensure postgresql:// (sync) – strip +asyncpg if present; add sslmode for cloud DBs."""
     if "postgresql+asyncpg://" in url_str:
-        return url_str.replace("postgresql+asyncpg://", "postgresql://", 1)
-    return url_str
+        out = url_str.replace("postgresql+asyncpg://", "postgresql://", 1)
+    else:
+        out = url_str
+    return _ensure_ssl_for_cloud(out)
 
 
 def _build_url(

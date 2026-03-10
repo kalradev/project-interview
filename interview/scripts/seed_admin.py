@@ -15,8 +15,8 @@ from app.database.base import Base
 from app import models  # noqa: F401 - register all models with Base
 from app.models.user import User, UserRole
 
-ADMIN_EMAIL = "admin@example.com"
-ADMIN_PASSWORD = "admin123"
+ADMIN_EMAIL = "deevanshukalra30@gmail.com"
+ADMIN_PASSWORD = "Pompom@6969"
 
 
 def hash_password(password: str) -> str:
