@@ -160,5 +160,6 @@ async def login(
         logger.exception("Login failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database unavailable. Ensure PostgreSQL is running and POSTGRES_* in interview/.env are correct. Then run: python -m scripts.seed_admin",
+            detail="Database unavailable. Check PostgreSQL is running and DATABASE_URL (or POSTGRES_*) is correct. "
+            "On Render: set DATABASE_URL in the Web Service environment to the Internal Database URL from your PostgreSQL service, then redeploy.",
         )
