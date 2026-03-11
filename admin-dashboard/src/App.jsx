@@ -3,6 +3,7 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import CandidateProfile from './pages/CandidateProfile'
+import AdminProfile from './pages/AdminProfile'
 
 const tokenKey = 'interview_admin_token'
 
@@ -43,6 +44,14 @@ export default function App() {
         element={
           <Protected>
             <CandidateProfile />
+          </Protected>
+        }
+      />
+      <Route
+        path="/dashboard/profile"
+        element={
+          <Protected>
+            <AdminProfile />
           </Protected>
         }
       />

@@ -24,6 +24,36 @@ export async function login(email, password) {
   return res.json()
 }
 
+/** Get current authenticated user (for admin profile). */
+export async function getMe(token) {
+  const res = await fetch(`${BASE}/api/v1/auth/me`, {
+    headers: headers(token),
+  })
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Session expired or invalid. Please sign in again.')
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || 'Failed to load profile')
+  }
+  return res.json()
+}
+
+/** Change password for current user. */
+export async function changePassword(token, currentPassword, newPassword) {
+  const res = await fetch(`${BASE}/api/v1/auth/change-password`, {
+    method: 'POST',
+    headers: headers(token),
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || 'Failed to change password')
+  }
+  return res.json()
+}
+
 /** Public signup (only works when no users exist – creates first admin). */
 export async function signup(email, password, fullName = '') {
   const res = await fetch(`${BASE}/api/v1/auth/signup`, {

@@ -117,16 +117,14 @@ def _ensure_ssl_for_cloud(url_str: str) -> str:
 
 
 def _to_async_url(url_str: str) -> str:
-    """Convert postgresql:// or postgres:// to postgresql+asyncpg://; add sslmode for cloud DBs."""
+    """Convert postgresql:// or postgres:// to postgresql+asyncpg://. Do not add sslmode (asyncpg doesn't accept it); use connect_args in engine instead."""
     if "postgresql+asyncpg://" in url_str:
-        out = url_str
-    elif url_str.startswith("postgres://"):
-        out = url_str.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif url_str.startswith("postgresql://"):
-        out = url_str.replace("postgresql://", "postgresql+asyncpg://", 1)
-    else:
-        out = url_str
-    return _ensure_ssl_for_cloud(out)
+        return url_str
+    if url_str.startswith("postgres://"):
+        return url_str.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url_str.startswith("postgresql://"):
+        return url_str.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url_str
 
 
 def _to_sync_url(url_str: str) -> str:

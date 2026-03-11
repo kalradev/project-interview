@@ -25,10 +25,24 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+def _engine_connect_args(settings) -> dict:
+    """Enable SSL for asyncpg when using cloud DB (Render, Supabase, etc.)."""
+    url = (settings.database_url_env or "") + (settings.database_url or "")
+    if any(h in url for h in ("render.com", "dpg-", "supabase", "railway", "neon.tech", "amazonaws.com")):
+        return {"ssl": True}
+    return {}
+
+
 async def main():
     settings = get_settings()
-    print(f"Using DB: {settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}")
-    engine = create_async_engine(settings.database_url)
+    if settings.database_url_env and settings.database_url_env.strip():
+        print("Using DB: from DATABASE_URL")
+    else:
+        print(f"Using DB: {settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}")
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args=_engine_connect_args(settings),
+    )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

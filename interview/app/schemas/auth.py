@@ -62,3 +62,10 @@ class Token(BaseModel):
     refresh_token: Optional[str] = None
     token_type: str = "bearer"
     expires_in: int
+
+
+class ChangePasswordRequest(BaseModel):
+    """Schema for change password."""
+
+    current_password: str
+    new_password: str

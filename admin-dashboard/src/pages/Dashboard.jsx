@@ -5,6 +5,29 @@ import { listCandidates, addCandidate, getReport, candidateAction, deleteCandida
 import Orb from '../components/Orb'
 import './Dashboard.css'
 
+const CANDIDATES_CACHE_KEY = 'dashboard_candidates_cache'
+const CANDIDATES_CACHE_TTL_MS = 2 * 60 * 1000 // 2 minutes
+
+function getCachedCandidates(statusFilter) {
+  try {
+    const key = `${CANDIDATES_CACHE_KEY}_${statusFilter || 'all'}`
+    const raw = sessionStorage.getItem(key)
+    if (!raw) return null
+    const { data, at } = JSON.parse(raw)
+    if (!Array.isArray(data) || Date.now() - at > CANDIDATES_CACHE_TTL_MS) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
+function setCachedCandidates(statusFilter, data) {
+  try {
+    const key = `${CANDIDATES_CACHE_KEY}_${statusFilter || 'all'}`
+    sessionStorage.setItem(key, JSON.stringify({ data, at: Date.now() }))
+  } catch (_) {}
+}
+
 function formatDate(d) {
   if (!d) return '—'
   return new Date(d).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
@@ -12,8 +35,9 @@ function formatDate(d) {
 
 export default function Dashboard() {
   const token = getToken()
-  const [candidates, setCandidates] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [candidates, setCandidates] = useState(() => getCachedCandidates('') ?? [])
+  const [loading, setLoading] = useState(!getCachedCandidates(''))
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [report, setReport] = useState(null)
   const [statusFilter, setStatusFilter] = useState('')
@@ -48,22 +72,37 @@ export default function Dashboard() {
   const [formSuccess, setFormSuccess] = useState('')
   const [deletingId, setDeletingId] = useState(null)
 
-  const loadCandidates = async () => {
-    setLoading(true)
-    setError('')
+  const loadCandidates = async (background = false) => {
+    const cached = getCachedCandidates(statusFilter)
+    if (!background) {
+      setLoading(!cached)
+      setError('')
+    } else {
+      setRefreshing(true)
+    }
     try {
       const params = statusFilter ? { status: statusFilter } : {}
       const data = await listCandidates(token, params)
       setCandidates(data)
+      setCachedCandidates(statusFilter, data)
     } catch (err) {
-      setError(err.message || 'Failed to load candidates')
+      if (!background) setError(err.message || 'Failed to load candidates')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
   useEffect(() => {
-    loadCandidates()
+    const cached = getCachedCandidates(statusFilter)
+    if (cached && cached.length >= 0) {
+      setCandidates(cached)
+      setLoading(false)
+      loadCandidates(true)
+    } else {
+      setCandidates([])
+      loadCandidates(false)
+    }
   }, [token, statusFilter])
 
   function clearExtractedFormFields() {
@@ -268,6 +307,7 @@ export default function Dashboard() {
           <button type="button" className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
             {showForm ? 'Cancel' : '+ Add resume'}
           </button>
+          <Link to="/dashboard/profile" className="btn btn-outline">Profile</Link>
           <button type="button" className="btn btn-outline" onClick={logout}>
             Log out
           </button>
@@ -567,7 +607,17 @@ export default function Dashboard() {
 
       <section className="candidates-section">
         <div className="candidates-section-header">
-          <h2>Candidates ({candidates.length})</h2>
+          <h2>
+            Candidates
+            {loading && candidates.length === 0 ? (
+              <span className="candidates-count-loading"> …</span>
+            ) : (
+              <span className="candidates-count"> ({candidates.length})</span>
+            )}
+            {refreshing && candidates.length > 0 && (
+              <span className="candidates-updating" aria-hidden> Updating…</span>
+            )}
+          </h2>
           <label className="candidates-section-filter">
             Status
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -582,8 +632,41 @@ export default function Dashboard() {
             </select>
           </label>
         </div>
-        {loading ? (
-          <p className="loading">Loading…</p>
+        {loading && candidates.length === 0 ? (
+          <div className="candidates-loading-skeleton" aria-busy="true" aria-label="Loading candidates">
+            <div className="table-wrap">
+              <table className="candidates-table candidates-table-skeleton">
+                <thead>
+                  <tr>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Job role</th>
+                    <th>ATS</th>
+                    <th>Status</th>
+                    <th>Invited</th>
+                    <th>Interview</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <tr key={i}>
+                      <td><span className="skeleton-box" /></td>
+                      <td><span className="skeleton-line" /></td>
+                      <td><span className="skeleton-line" /></td>
+                      <td><span className="skeleton-line" /></td>
+                      <td><span className="skeleton-box" style={{ width: '2.5rem' }} /></td>
+                      <td><span className="skeleton-line" style={{ width: '4rem' }} /></td>
+                      <td><span className="skeleton-line" /></td>
+                      <td><span className="skeleton-line" /></td>
+                      <td><span className="skeleton-line" style={{ width: '6rem' }} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : candidates.length === 0 ? (
           <p className="empty">No candidates yet. Use “Add resume” to add one.</p>
         ) : (

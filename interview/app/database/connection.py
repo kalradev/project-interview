@@ -16,12 +16,19 @@ logger = logging.getLogger(__name__)
 from app import models  # noqa: F401
 
 settings = get_settings()
+# asyncpg doesn't accept sslmode in URL; enable SSL via connect_args for cloud DBs (Render, Supabase, etc.)
+_url_raw = (settings.database_url_env or "") + (settings.database_url or "")
+_cloud_ssl = any(
+    h in _url_raw
+    for h in ("render.com", "dpg-", "supabase", "railway", "neon.tech", "amazonaws.com")
+)
 async_engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
+    connect_args={"ssl": True} if _cloud_ssl else {},
 )
 async_session_factory = async_sessionmaker(
     async_engine,

@@ -534,6 +534,59 @@
   letter-spacing: -0.01em;
 }
 
+.candidates-count-loading {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.candidates-count {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.candidates-updating {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  margin-left: 0.25rem;
+}
+
+/* Skeleton while candidates are loading (no cache) */
+.candidates-loading-skeleton {
+  margin-top: 0.5rem;
+}
+
+.candidates-table-skeleton .skeleton-line,
+.candidates-table-skeleton .skeleton-box {
+  display: inline-block;
+  height: 1rem;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 0%,
+    rgba(221, 228, 236, 0.6) 50%,
+    var(--color-border) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShine 1.2s ease-in-out infinite;
+}
+
+.candidates-table-skeleton .skeleton-line {
+  min-width: 4rem;
+  max-width: 8rem;
+}
+
+.candidates-table-skeleton .skeleton-box {
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+}
+
+@keyframes skeletonShine {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .loading, .empty {
   color: var(--color-text-muted);
   margin: 1rem 0;
