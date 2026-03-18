@@ -1,10 +1,13 @@
 """Admin routes - import candidates, list, report, allow/select/reject."""
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.auth.dependencies import require_roles
 from app.auth.jwt import get_current_user_required
@@ -117,12 +120,30 @@ async def list_candidates(
     db: AsyncSession = Depends(get_async_session),
     _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
 ):
-    """List all candidates, optionally filter by status."""
-    rows = await get_candidates(db, status=status, limit=limit, offset=offset)
-    return [
-        _candidate_to_response(profile, user.email, user.full_name)
-        for profile, user in rows
-    ]
+    """List all candidates, optionally filter by status. Optimized for fast loading."""
+    import asyncio
+    import time
+    start_time = time.time()
+    try:
+        # Add timeout to prevent slow queries
+        rows = await asyncio.wait_for(
+            get_candidates(db, status=status, limit=limit, offset=offset),
+            timeout=3.0,  # 3 second timeout for list queries
+        )
+        result = [
+            _candidate_to_response(profile, user.email, user.full_name)
+            for profile, user in rows
+        ]
+        elapsed = time.time() - start_time
+        if elapsed > 1.0:  # Log if query takes more than 1 second
+            logger.warning(f"List candidates query took {elapsed:.2f}s (status={status}, limit={limit})")
+        return result
+    except asyncio.TimeoutError:
+        logger.error(f"List candidates query timed out after 3 seconds (status={status})")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database query timeout. Please try again.",
+        )
 
 
 @router.get("/{candidate_id}", response_model=CandidateResponse)
@@ -131,18 +152,29 @@ async def get_candidate(
     db: AsyncSession = Depends(get_async_session),
     _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
 ):
-    """Get a single candidate by id (for profile page)."""
-    profile_result = await db.execute(
-        select(CandidateProfile).where(CandidateProfile.id == candidate_id)
-    )
-    profile = profile_result.scalar_one_or_none()
-    if not profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
-    user_result = await db.execute(select(User).where(User.id == profile.user_id))
-    user = user_result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return _candidate_to_response(profile, user.email, user.full_name, include_resume=True)
+    """Get a single candidate by id (for profile page). Optimized with join."""
+    import asyncio
+    try:
+        # Use join to fetch both in one query for better performance
+        result = await asyncio.wait_for(
+            db.execute(
+                select(CandidateProfile, User)
+                .join(User, CandidateProfile.user_id == User.id)
+                .where(CandidateProfile.id == candidate_id)
+            ),
+            timeout=2.0,  # 2 second timeout
+        )
+        row = result.first()
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+        profile, user = row
+        return _candidate_to_response(profile, user.email, user.full_name, include_resume=True)
+    except asyncio.TimeoutError:
+        logger.error(f"Get candidate query timed out for {candidate_id}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database query timeout. Please try again.",
+        )
 
 
 @router.get("/{candidate_id}/report", response_model=InterviewReportResponse | None)
@@ -151,51 +183,131 @@ async def get_candidate_report(
     db: AsyncSession = Depends(get_async_session),
     _user=Depends(require_roles(UserRole.ADMIN, UserRole.INTERVIEWER)),
 ):
-    """Get full interview report for a candidate (last session: exchanges + summary + integrity)."""
-    profile_result = await db.execute(
-        select(CandidateProfile).where(CandidateProfile.id == candidate_id)
-    )
-    profile = profile_result.scalar_one_or_none()
-    if not profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+    """Get full interview report for a candidate (last session: exchanges + summary + integrity). Optimized with parallel queries."""
+    import asyncio
+    import time
+    start_time = time.time()
+    try:
+        # First, get profile and user in one query
+        profile_user_result = await asyncio.wait_for(
+            db.execute(
+                select(CandidateProfile, User)
+                .join(User, CandidateProfile.user_id == User.id)
+                .where(CandidateProfile.id == candidate_id)
+            ),
+            timeout=2.0,
+        )
+        row = profile_user_result.first()
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidate not found")
+        profile, user = row
 
-    user_result = await db.execute(select(User).where(User.id == profile.user_id))
-    user = user_result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        # Get the latest session
+        session_result = await asyncio.wait_for(
+            db.execute(
+                select(InterviewSession)
+                .where(InterviewSession.candidate_id == profile.user_id)
+                .order_by(InterviewSession.started_at.desc())
+                .limit(1)
+            ),
+            timeout=2.0,
+        )
+        session = session_result.scalar_one_or_none()
+        if not session:
+            return None
 
-    session_result = await db.execute(
-        select(InterviewSession)
-        .where(InterviewSession.candidate_id == profile.user_id)
-        .order_by(InterviewSession.started_at.desc())
-        .limit(1)
-    )
-    session = session_result.scalar_one_or_none()
-    if not session:
-        return None
+        # Execute all remaining queries in parallel for better performance
+        from app.models.integrity_score import IntegrityScore
+        
+        exchanges_task = asyncio.wait_for(
+            db.execute(
+                select(InterviewExchange)
+                .where(InterviewExchange.session_id == session.id)
+                .order_by(InterviewExchange.question_index)
+            ),
+            timeout=2.0,
+        )
+        
+        score_task = asyncio.wait_for(
+            db.execute(
+                select(IntegrityScore)
+                .where(IntegrityScore.session_id == session.id)
+                .order_by(IntegrityScore.computed_at.desc())
+                .limit(1)
+            ),
+            timeout=2.0,
+        )
+        
+        photos_task = asyncio.wait_for(
+            db.execute(
+                select(SessionPhoto)
+                .where(SessionPhoto.session_id == session.id)
+                .order_by(SessionPhoto.captured_at)
+            ),
+            timeout=2.0,
+        )
 
-    exchanges_result = await db.execute(
-        select(InterviewExchange)
-        .where(InterviewExchange.session_id == session.id)
-        .order_by(InterviewExchange.question_index)
-    )
-    exchanges = exchanges_result.scalars().all()
-
-    from app.models.integrity_score import IntegrityScore
-    score_result = await db.execute(
-        select(IntegrityScore)
-        .where(IntegrityScore.session_id == session.id)
-        .order_by(IntegrityScore.computed_at.desc())
-        .limit(1)
-    )
-    score_row = score_result.scalar_one_or_none()
-
-    photos_result = await db.execute(
-        select(SessionPhoto)
-        .where(SessionPhoto.session_id == session.id)
-        .order_by(SessionPhoto.captured_at)
-    )
-    session_photos = photos_result.scalars().all()
+        # Wait for all queries to complete in parallel
+        exchanges_result, score_result, photos_result = await asyncio.gather(
+            exchanges_task, score_task, photos_task
+        )
+        
+        exchanges = exchanges_result.scalars().all()
+        score_row = score_result.scalar_one_or_none()
+        session_photos = photos_result.scalars().all()
+        
+        elapsed = time.time() - start_time
+        if elapsed > 2.0:  # Log if report takes more than 2 seconds
+            logger.warning(f"Get candidate report took {elapsed:.2f}s for {candidate_id}")
+        
+        return InterviewReportResponse(
+            session_id=session.id,
+            candidate_id=profile.id,
+            candidate_email=user.email,
+            job_role=profile.job_role,
+            exchanges=[
+                InterviewExchangeResponse(
+                    question_index=e.question_index,
+                    question_text=e.question_text,
+                    answer_text=e.answer_text,
+                    created_at=e.created_at,
+                )
+                for e in exchanges
+            ],
+            summary=session.interview_summary,
+            integrity_score=float(score_row.score) if score_row else None,
+            integrity_risk=score_row.risk_level if score_row else None,
+            started_at=session.started_at,
+            ended_at=session.ended_at,
+            photo_url=profile.photo_url,
+            session_photos=[
+                SessionPhotoResponse(id=p.id, photo_url=p.photo_url, captured_at=p.captured_at)
+                for p in session_photos
+            ],
+            video_url=session.video_url,
+            agent_report=AgentReportBlock(
+                accuracy_score=session.agent_report.get("accuracy_score") if session.agent_report else None,
+                communication_score=session.agent_report.get("communication_score") if session.agent_report else None,
+                summary=session.agent_report.get("summary") if session.agent_report else None,
+                interrupt_count=session.agent_report.get("interrupt_count", 0) if session.agent_report else 0,
+            ) if session.agent_report else None,
+            face_lip_status=session.face_lip_status,
+        )
+    except asyncio.TimeoutError:
+        elapsed = time.time() - start_time if 'start_time' in locals() else 0
+        logger.error(f"Get candidate report timed out after 2 seconds (total: {elapsed:.2f}s) for {candidate_id}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database query timeout. Please try again.",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Get candidate report failed for {candidate_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to load report. Please try again.",
+        )
 
     return InterviewReportResponse(
         session_id=session.id,

@@ -291,6 +291,11 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      {loading && candidates.length === 0 && (
+        <div className="page-loading-overlay">
+          <div className="page-loading-spinner"></div>
+        </div>
+      )}
       <div className="dashboard-bg-animation" aria-hidden="true">
         <div className="dashboard-bg-blob dashboard-bg-blob-1" />
         <div className="dashboard-bg-blob dashboard-bg-blob-2" />

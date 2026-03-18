@@ -26,17 +26,17 @@ _cloud_ssl = any(
 _connect_args = {}
 if _cloud_ssl:
     _connect_args["ssl"] = True
-# Add command timeout (10 seconds) to prevent hanging queries
-# Note: connection timeout is handled by asyncpg's default (5 seconds) or can be set via timeout parameter
-_connect_args["command_timeout"] = 10
+# Add command timeout (5 seconds) to prevent hanging queries - reduced for faster failure
+# Note: connection timeout is handled by asyncpg's default (5 seconds)
+_connect_args["command_timeout"] = 5
 async_engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=5,  # Reduced from 10 - smaller pool for faster connection acquisition
+    max_overflow=10,  # Reduced from 20
     pool_recycle=3600,  # Recycle connections after 1 hour to prevent stale connections
-    pool_timeout=10,  # Wait up to 10 seconds for a connection from the pool
+    pool_timeout=5,  # Reduced to 5 seconds - fail faster if pool is exhausted
     connect_args=_connect_args,
 )
 async_session_factory = async_sessionmaker(

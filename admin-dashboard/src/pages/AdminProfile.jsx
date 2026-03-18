@@ -63,6 +63,11 @@ export default function AdminProfile() {
 
   return (
     <div className="dashboard admin-profile-page">
+      {loading && (
+        <div className="page-loading-overlay">
+          <div className="page-loading-spinner"></div>
+        </div>
+      )}
       <div className="dashboard-bg-animation" aria-hidden="true">
         <div className="dashboard-bg-blob dashboard-bg-blob-1" />
         <div className="dashboard-bg-blob dashboard-bg-blob-2" />

@@ -836,7 +836,7 @@ def compute_ats_score_detailed(
         return s.strip().title() if s else ""
 
     if not job_desc:
-        # No job description: score from resume completeness only, no missing skills
+        # No job description: score from resume completeness only, use more realistic scoring
         required_skills = []
         job_req = {}
     else:
@@ -856,7 +856,18 @@ def compute_ats_score_detailed(
     if required_skills:
         skills_pct = min(100.0, 100.0 * len(matched_skills) / len(required_skills))
     else:
-        skills_pct = 100.0 if resume_skills_set else 50.0
+        # No job description: score based on number of skills (more skills = higher score, but cap at 70%)
+        skill_count = len(resume_skills_set)
+        if skill_count >= 10:
+            skills_pct = 70.0
+        elif skill_count >= 5:
+            skills_pct = 60.0
+        elif skill_count >= 3:
+            skills_pct = 50.0
+        elif skill_count >= 1:
+            skills_pct = 40.0
+        else:
+            skills_pct = 25.0
 
     # Experience match: 25% (has experience entries + relevance)
     experience_entries = details.get("experience") or []
@@ -865,7 +876,13 @@ def compute_ats_score_detailed(
     exp_keywords = job_req.get("experience_keywords") or []
     exp_relevance = sum(1 for k in exp_keywords if k in experience_text)
     if has_experience:
-        experience_pct = 60.0 + min(40.0, 20.0 * len(experience_entries) + 10.0 * exp_relevance)
+        if exp_keywords:
+            # With job description: use relevance
+            experience_pct = 60.0 + min(40.0, 20.0 * len(experience_entries) + 10.0 * exp_relevance)
+        else:
+            # No job description: score based on experience quality and quantity
+            exp_quality = min(40.0, 15.0 * len(experience_entries) + 10.0 * min(len(experience_text.split()) / 50, 1.0) * 20.0)
+            experience_pct = 50.0 + exp_quality
     else:
         experience_pct = 20.0  # low if no structured experience
     experience_pct = min(100.0, experience_pct)
@@ -876,9 +893,13 @@ def compute_ats_score_detailed(
     edu_keywords = job_req.get("education_keywords") or []
     if education_lines:
         edu_match = sum(1 for k in EDUCATION_DEGREE_KEYWORDS if k in edu_text)
-        education_pct = 50.0 + min(50.0, edu_match * 15.0) if edu_keywords else 80.0
+        if edu_keywords:
+            education_pct = 50.0 + min(50.0, edu_match * 15.0)
+        else:
+            # No job description: score based on education level found
+            education_pct = 50.0 + min(30.0, edu_match * 10.0)
     else:
-        education_pct = 30.0 if edu_keywords else 70.0
+        education_pct = 30.0 if edu_keywords else 40.0  # Lower default when no job description
     education_pct = min(100.0, education_pct)
 
     # Keyword match: 20%
@@ -887,7 +908,18 @@ def compute_ats_score_detailed(
         kw_found = sum(1 for k in general_keywords if k in resume_lower)
         keyword_pct = 100.0 * kw_found / len(general_keywords)
     else:
-        keyword_pct = 70.0
+        # No job description: score based on resume keywords and length
+        resume_keywords_found = sum(1 for k in RESUME_KEYWORDS if k in resume_lower)
+        word_count = len(resume_lower.split())
+        # More keywords and reasonable length = better score
+        if resume_keywords_found >= 5 and word_count >= 200:
+            keyword_pct = 60.0
+        elif resume_keywords_found >= 3 and word_count >= 150:
+            keyword_pct = 50.0
+        elif resume_keywords_found >= 1 and word_count >= 100:
+            keyword_pct = 40.0
+        else:
+            keyword_pct = 30.0
     keyword_pct = min(100.0, keyword_pct)
 
     # Weighted score

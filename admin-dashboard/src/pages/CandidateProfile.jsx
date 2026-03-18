@@ -75,22 +75,6 @@ export default function CandidateProfile() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="candidate-profile-page">
-        <div className="candidate-profile-header-bar">
-          <header className="candidate-profile-header">
-            <h1>Candidate profile</h1>
-            <Link to="/dashboard" className="btn btn-outline">← Resumes &amp; Candidates</Link>
-          </header>
-        </div>
-        <main className="candidate-profile-main">
-          <p className="candidate-profile-loading">Loading…</p>
-        </main>
-      </div>
-    )
-  }
-
   if (error && !candidate) {
     return (
       <div className="candidate-profile-page">
@@ -125,6 +109,11 @@ export default function CandidateProfile() {
 
   return (
     <div className="candidate-profile-page">
+      {loading && (
+        <div className="page-loading-overlay">
+          <div className="page-loading-spinner"></div>
+        </div>
+      )}
       <div className="candidate-profile-header-bar">
         <header className="candidate-profile-header">
           <h1>Candidate profile</h1>

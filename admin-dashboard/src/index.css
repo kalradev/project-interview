@@ -66,6 +66,10 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   animation: pageFadeIn 0.4s var(--ease-out);
+  /* Scroll performance optimizations */
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  overscroll-behavior: contain; /* Prevent scroll chaining */
 }
 
 #root {

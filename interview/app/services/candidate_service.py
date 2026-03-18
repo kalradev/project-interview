@@ -146,7 +146,40 @@ async def get_candidates(
     limit: int = 100,
     offset: int = 0,
 ) -> list[tuple[CandidateProfile, User]]:
-    q = select(CandidateProfile, User).join(User, CandidateProfile.user_id == User.id)
+    """Get candidates with optimized query - excludes large text fields for list view."""
+    from sqlalchemy.orm import load_only
+    
+    # Only load necessary columns for list view (exclude resume_text, ats_details which can be large)
+    q = (
+        select(CandidateProfile, User)
+        .join(User, CandidateProfile.user_id == User.id)
+        .options(
+            load_only(
+                CandidateProfile.id,
+                CandidateProfile.user_id,
+                CandidateProfile.job_role,
+                CandidateProfile.tech_stack,
+                CandidateProfile.links,
+                CandidateProfile.projects,
+                CandidateProfile.certificates,
+                CandidateProfile.experience,
+                CandidateProfile.source,
+                CandidateProfile.status,
+                CandidateProfile.ats_score,
+                CandidateProfile.resume_url,
+                CandidateProfile.interview_scheduled_at,
+                CandidateProfile.invited_at,
+                CandidateProfile.photo_url,
+                CandidateProfile.created_at,
+                CandidateProfile.updated_at,
+            ),
+            load_only(
+                User.id,
+                User.email,
+                User.full_name,
+            ),
+        )
+    )
     if status:
         q = q.where(CandidateProfile.status == status)
     q = q.order_by(CandidateProfile.created_at.desc()).limit(limit).offset(offset)
