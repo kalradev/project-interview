@@ -22,13 +22,22 @@ _cloud_ssl = any(
     h in _url_raw
     for h in ("render.com", "dpg-", "supabase", "railway", "neon.tech", "amazonaws.com")
 )
+# Connection timeout settings for asyncpg
+_connect_args = {}
+if _cloud_ssl:
+    _connect_args["ssl"] = True
+# Add command timeout (10 seconds) to prevent hanging queries
+# Note: connection timeout is handled by asyncpg's default (5 seconds) or can be set via timeout parameter
+_connect_args["command_timeout"] = 10
 async_engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
-    connect_args={"ssl": True} if _cloud_ssl else {},
+    pool_recycle=3600,  # Recycle connections after 1 hour to prevent stale connections
+    pool_timeout=10,  # Wait up to 10 seconds for a connection from the pool
+    connect_args=_connect_args,
 )
 async_session_factory = async_sessionmaker(
     async_engine,

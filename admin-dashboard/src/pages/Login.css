@@ -434,6 +434,58 @@
   box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
 }
 
+.login-password-wrap {
+  display: block;
+}
+
+.login-password-field {
+  position: relative;
+  display: block;
+  margin-top: 0.4rem;
+}
+
+.login-password-field input {
+  margin-top: 0;
+  padding-right: 2.75rem;
+}
+
+/* Eye icon inside password field – small icon only, not the big blue button style */
+.login-card .login-password-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  cursor: pointer;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.login-card .login-password-toggle:hover {
+  color: #e2e8f0 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.login-card .login-password-toggle:focus {
+  outline: none;
+}
+
+.login-card .login-password-toggle:focus-visible {
+  outline: 2px solid rgba(14, 165, 233, 0.5);
+  outline-offset: 1px;
+}
+
 .login-error {
   margin: 0 0 1rem;
   padding: 0.65rem 1rem;
@@ -444,6 +496,13 @@
   border-radius: 10px;
   border: 1px solid rgba(239, 68, 68, 0.25);
   animation: cardSlideUp 0.3s var(--ease-out);
+}
+
+.login-slow-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
 }
 
 .login-card button {
@@ -495,5 +554,32 @@
     0 0 0 2px rgba(0, 0, 0, 0.8),
     0 0 0 4px rgba(14, 165, 233, 0.5),
     0 2px 8px rgba(14, 165, 233, 0.35);
+}
+
+/* Keep password eye as a small icon inside the field (override any .login-card button style) */
+.login-card button.login-password-toggle,
+.login-card .login-password-toggle {
+  width: 2rem !important;
+  min-width: 2rem !important;
+  margin: 0 !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  box-shadow: none !important;
+  border-radius: 6px;
+  font-size: inherit;
+  transform: translateY(-50%);
+}
+.login-card button.login-password-toggle:hover,
+.login-card .login-password-toggle:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e2e8f0 !important;
+  box-shadow: none !important;
+  transform: translateY(-50%);
+}
+.login-card button.login-password-toggle:focus-visible,
+.login-card .login-password-toggle:focus-visible {
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.5) !important;
 }
 

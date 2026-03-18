@@ -15,6 +15,7 @@ from app.models.user import User, UserRole
 from app.services.email_service import send_invite_email
 from app.config import get_settings
 from app.auth.password import hash_password as _hash_password
+from app.auth.jwt import create_interview_link_token
 
 
 def _generate_password() -> str:
@@ -115,12 +116,18 @@ async def add_candidate(
     email_error = ""
     if send_email:
         settings = get_settings()
+        interview_link_url = ""
+        if getattr(settings, "interview_web_url", "").strip():
+            link_token = create_interview_link_token(user.id)
+            base = settings.interview_web_url.strip().rstrip("/")
+            interview_link_url = f"{base}/exam?token={link_token}"
         email_sent, email_error = send_invite_email(
             to_email=email,
             password=password,
             interview_scheduled_at=interview_scheduled_at,
             setup_download_url=settings.setup_app_download_url,
             candidate_name=display_name,
+            interview_link_url=interview_link_url or None,
         )
 
     return user, profile, password, email_sent, email_error

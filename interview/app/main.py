@@ -16,7 +16,7 @@ from app.config import get_settings
 from app.database import init_db
 from app.models.user import User
 from app.auth.password import hash_password
-from app.routes import auth, sessions, events, integrity, interview, websocket_router, admin_candidates, admin_resumes, candidate
+from app.routes import auth, sessions, events, integrity, interview, websocket_router, admin_candidates, admin_resumes, candidate, exam
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +117,7 @@ def create_application() -> FastAPI:
     app.include_router(integrity.router, prefix=f"{settings.api_v1_prefix}/integrity", tags=["Integrity"])
     app.include_router(interview.router, prefix=f"{settings.api_v1_prefix}/interview", tags=["Interview"])
     app.include_router(candidate.router, prefix=f"{settings.api_v1_prefix}/candidate", tags=["Candidate"])
+    app.include_router(exam.router, prefix=f"{settings.api_v1_prefix}/exam", tags=["Exam"])
     app.include_router(admin_candidates.router, prefix=f"{settings.api_v1_prefix}/admin/candidates", tags=["Admin Candidates"])
     app.include_router(admin_resumes.router, prefix=f"{settings.api_v1_prefix}/admin/resumes", tags=["Admin Resumes"])
     app.include_router(websocket_router.router, prefix=f"{settings.api_v1_prefix}/ws", tags=["WebSocket"])

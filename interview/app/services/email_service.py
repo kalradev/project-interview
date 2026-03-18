@@ -65,10 +65,19 @@ def _build_invite_plain(
     interview_scheduled_at: datetime | None,
     setup_download_url: str,
     candidate_name: str | None,
+    interview_link_url: str | None = None,
 ) -> str:
     """Return plain-text body."""
     time_str = _format_interview_time_local(interview_scheduled_at)
     name = candidate_name or "Candidate"
+    take_interview_block = ""
+    if interview_link_url:
+        take_interview_block = f"""
+TAKE YOUR INTERVIEW (browser – no install)
+Click this link to start your interview in your browser. You will be asked to stay in full screen; do not switch tabs.
+{interview_link_url}
+
+"""
     return f"""Hello {name},
 
 You have been shortlisted for an interview. Please use the details below to take the interview.
@@ -80,8 +89,7 @@ LOGIN CREDENTIALS
 INTERVIEW TIMING
 {time_str}
 (Interviews are scheduled between {_interview_window_text()}.)
-
-SETUP (Interview Agent app)
+{take_interview_block}SETUP (Interview Agent app – optional)
 1. Download and install the Interview Agent from: {setup_download_url}
 2. Open the app and use "Start in standalone mode" to practice, or enter the API URL and Session ID when provided by the recruiter.
 3. On the day of the interview, log in with the email and password above. The screen will lock and the interview will begin.
@@ -99,10 +107,27 @@ def _build_invite_html(
     interview_scheduled_at: datetime | None,
     setup_download_url: str,
     candidate_name: str | None,
+    interview_link_url: str | None = None,
 ) -> str:
     """Return professional HTML body (inline styles for email clients)."""
     time_str = _format_interview_time_local(interview_scheduled_at)
     name = candidate_name or "Candidate"
+    take_interview_section = ""
+    if interview_link_url:
+        take_interview_section = f"""
+          <tr>
+            <td style="padding: 0 32px 20px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, {EMAIL_PRIMARY} 0%, #0ea5e9 100%); border-radius: 10px; border: 1px solid {EMAIL_BORDER};">
+                <tr>
+                  <td style="padding: 20px 24px; text-align: center;">
+                    <p style="margin: 0 0 12px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.04em;">Take your interview (no install)</p>
+                    <p style="margin: 0 0 16px; font-size: 15px; color: #fff;">Click the button below to start your interview in your browser. Stay in full screen and do not switch tabs.</p>
+                    <a href="{interview_link_url}" style="display: inline-block; padding: 12px 24px; background: #fff; color: {EMAIL_PRIMARY}; font-weight: 700; font-size: 15px; text-decoration: none; border-radius: 8px;">Start interview</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>"""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -158,6 +183,8 @@ def _build_invite_html(
               <p style="margin: 6px 0 0; font-size: 13px; color: {EMAIL_MUTED};">Interviews are scheduled between {_interview_window_text()}.</p>
             </td>
           </tr>
+          <!-- Take interview link (browser) -->
+          {take_interview_section}
           <!-- Setup steps -->
           <tr>
             <td style="padding: 0 32px 24px;">
@@ -191,14 +218,15 @@ def _build_invite_body(
     interview_scheduled_at: datetime | None,
     setup_download_url: str,
     candidate_name: str | None,
+    interview_link_url: str | None = None,
 ) -> tuple[str, str, str]:
     """Return (subject, plain_text_body, html_body)."""
     subject = "Your Interview – Login Details & Setup"
     plain = _build_invite_plain(
-        to_email, password, interview_scheduled_at, setup_download_url, candidate_name
+        to_email, password, interview_scheduled_at, setup_download_url, candidate_name, interview_link_url
     )
     html = _build_invite_html(
-        to_email, password, interview_scheduled_at, setup_download_url, candidate_name
+        to_email, password, interview_scheduled_at, setup_download_url, candidate_name, interview_link_url
     )
     return subject, plain, html
 
@@ -280,16 +308,17 @@ def send_invite_email(
     interview_scheduled_at: datetime | None,
     setup_download_url: str,
     candidate_name: str | None = None,
+    interview_link_url: str | None = None,
 ) -> tuple[bool, str]:
     """
-    Send interview invite email with login credentials, interview time, and setup link.
+    Send interview invite email with login credentials, interview time, setup link, and optional browser interview link.
     Sends both professional HTML and plain-text versions.
     Uses SMTP first if configured; else Brevo.
     Returns (True, '') if sent, (False, error_message) if not configured or send failed.
     """
     settings = get_settings()
     subject, plain_body, html_body = _build_invite_body(
-        to_email, password, interview_scheduled_at, setup_download_url, candidate_name
+        to_email, password, interview_scheduled_at, setup_download_url, candidate_name, interview_link_url
     )
 
     if settings.smtp_host and settings.smtp_user and settings.smtp_password:

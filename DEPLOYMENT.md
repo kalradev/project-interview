@@ -170,10 +170,34 @@ If you omit `VITE_API_URL`, candidates can still type the API URL on the login s
 - **Cloud storage:** Google Drive, Dropbox, OneDrive – upload the installer and share a download link.
 - **Optional:** If you have a server/domain, you can host the file there and share that URL instead.
 
-### 3.4 Invite emails (optional)
+### 3.4 Put the setup link in invite emails (candidates download from mail)
 
-- In backend `.env`, set `SETUP_APP_DOWNLOAD_URL` to the installer (or a landing page that links to it).
-- When admins add candidates and send invite email, the email can include this link so candidates know where to download the app.
+The invite email already includes a “Download the Interview Agent” link. To use it:
+
+1. **Build the installer** (from project root):
+   ```bash
+   npm run electron:build
+   ```
+   - Optional: set `VITE_API_URL` so the app opens with your API URL pre-filled:
+     ```bash
+     VITE_API_URL=https://your-backend.onrender.com npm run electron:build
+     ```
+     (On Windows PowerShell: `$env:VITE_API_URL='https://...'; npm run electron:build`)
+   - Output: `release/Interview Agent Setup 1.0.0.exe` (Windows). Close any running Interview Agent or app using the `release` folder before building.
+
+2. **If the build fails on Windows** with “Cannot create symbolic link”:
+   - Run the terminal **as Administrator**, or
+   - Enable **Developer Mode** (Settings → Update & Security → For developers → Developer Mode), then run `npm run electron:build` again.
+
+3. **Host the installer** so it has a public URL:
+   - **GitHub Releases:** Create a new release (e.g. tag `v1.0.0`), upload `release/Interview Agent Setup 1.0.0.exe` as an asset. Use the “Latest” release URL or the direct download URL of the `.exe`.
+   - **Other:** Upload the `.exe` to any file host (e.g. Google Drive, Dropbox, S3) and get a direct download link.
+
+4. **Set the URL in the backend** so the email uses it:
+   - In `interview/.env`: `SETUP_APP_DOWNLOAD_URL=https://github.com/your-username/your-repo/releases/latest` (or your direct download URL).
+   - On Render/Railway: add the same variable in the backend service’s Environment.
+
+After this, when you add a candidate and send the invite email, the email will contain the download link so candidates can install the app from the mail.
 
 ---
 

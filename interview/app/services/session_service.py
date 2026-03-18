@@ -51,6 +51,24 @@ class SessionService:
         )
         return result.scalar_one_or_none()
 
+    async def get_or_create_for_candidate(
+        self, db: AsyncSession, candidate_id: UUID
+    ) -> InterviewSession:
+        """Get an active session for the candidate, or create one."""
+        result = await db.execute(
+            select(InterviewSession).where(
+                InterviewSession.candidate_id == candidate_id,
+                InterviewSession.status == "active",
+                InterviewSession.ended_at.is_(None),
+            ).order_by(InterviewSession.started_at.desc()).limit(1)
+        )
+        session = result.scalar_one_or_none()
+        if session:
+            return session
+        return await self.start_session(
+            db, SessionCreate(candidate_id=candidate_id, interviewer_id=None)
+        )
+
     async def end_session(
         self,
         db: AsyncSession,

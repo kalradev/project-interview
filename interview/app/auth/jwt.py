@@ -33,6 +33,37 @@ def create_access_token(
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
+def create_interview_link_token(subject: str | UUID) -> str:
+    """Create a short-lived JWT for the interview link (email link). Valid for interview_link_expire_days."""
+    settings = get_settings()
+    days = getattr(settings, "interview_link_expire_days", 7)
+    expire = datetime.now(timezone.utc) + timedelta(days=days)
+    to_encode = {
+        "sub": str(subject),
+        "exp": expire,
+        "type": "interview_link",
+    }
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+
+
+def decode_interview_link_token(token: str) -> dict:
+    """Decode interview link JWT. Returns payload with sub (user_id). Raises HTTPException if invalid."""
+    settings = get_settings()
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        if payload.get("type") != "interview_link":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid link",
+            )
+        return payload
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired link",
+        ) from e
+
+
 def decode_token(token: str) -> dict:
     """Decode and validate JWT token. Raises HTTPException on invalid token."""
     settings = get_settings()

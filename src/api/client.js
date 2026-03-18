@@ -85,6 +85,20 @@ export async function computeIntegrity(baseUrl, sessionId, authToken, aiProbabil
   return res.json()
 }
 
+/** Validate exam link token (from email). Returns { access_token, session_id, session_token, api_base_url }. */
+export async function validateExamToken(apiBaseUrl, token) {
+  const res = await fetch(url(apiBaseUrl, `${API_V1}/exam/validate`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || 'Invalid or expired link')
+  }
+  return res.json()
+}
+
 /** Login; returns { access_token, token_type, expires_in } */
 export async function login(baseUrl, email, password) {
   const res = await fetch(url(baseUrl, `${API_V1}/auth/login`), {

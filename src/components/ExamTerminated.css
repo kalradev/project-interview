@@ -1,0 +1,44 @@
+.exam-terminated {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--bg-gradient, linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%));
+}
+
+.exam-terminated-card {
+  max-width: 420px;
+  padding: 2rem;
+  background: rgba(30, 41, 59, 0.9);
+  border-radius: 16px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.exam-terminated-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.exam-terminated h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.exam-terminated p {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.exam-terminated-note {
+  margin-top: 1rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}

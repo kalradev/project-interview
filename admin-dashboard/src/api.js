@@ -11,6 +11,12 @@ function headers(token) {
   return h
 }
 
+/** Ping backend health to wake cold-started services (e.g. Render). Call when login page loads. */
+export function pingBackend() {
+  const url = BASE ? `${BASE.replace(/\/$/, '')}/health` : '/health'
+  fetch(url, { method: 'GET', keepalive: true }).catch(() => {})
+}
+
 export async function login(email, password) {
   const res = await fetch(`${BASE}/api/v1/auth/login`, {
     method: 'POST',

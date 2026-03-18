@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     # API
     api_v1_prefix: str = "/api/v1"
+    # Public API URL (e.g. https://your-api.onrender.com) - returned in exam/validate so the interview app knows where to call. If empty, frontend uses VITE_API_URL.
+    api_public_url: str = ""
     # CORS: comma-separated origins (e.g. https://dashboard.example.com). If set, used when debug=False.
     cors_origins: str = ""
 
@@ -91,6 +93,10 @@ class Settings(BaseSettings):
     smtp_from_email: str = ""
     # Link to download Interview Agent setup (e.g. your server or GitHub release)
     setup_app_download_url: str = "https://github.com/your-org/interview-agent/releases/latest"
+    # Base URL of the browser-based interview app (for "Take your interview" link in email)
+    interview_web_url: str = ""
+    # Interview link token validity (days)
+    interview_link_expire_days: int = Field(default=7, ge=1, le=90)
     # Interview scheduling window (default 11:00 AM–5:00 PM in given timezone)
     interview_window_start_hour: int = Field(default=11, ge=0, le=23, description="Start hour (0–23) for interview slot")
     interview_window_end_hour: int = Field(default=17, ge=0, le=23, description="End hour (0–23) for interview slot")

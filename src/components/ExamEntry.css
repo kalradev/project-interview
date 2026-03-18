@@ -1,0 +1,50 @@
+.exam-entry {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--bg-gradient, linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%));
+}
+
+.exam-entry-card {
+  max-width: 420px;
+  width: 100%;
+  padding: 2rem;
+  background: rgba(30, 41, 59, 0.9);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.exam-entry-card h1 {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.exam-entry-loading {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.exam-entry-desc {
+  margin: 0 0 1.5rem;
+  font-size: 0.9375rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.exam-entry-start {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.exam-entry-card-error .exam-entry-error {
+  margin: 0 0 1rem;
+  color: #fca5a5;
+  font-size: 0.9375rem;
+}

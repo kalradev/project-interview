@@ -6,6 +6,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from app.config import get_settings
 from app.database import get_async_session
@@ -174,22 +175,53 @@ async def login(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Login with JSON body; returns JWT."""
+    import asyncio
+    import time
+    start_time = time.time()
     try:
-        result = await db.execute(select(User).where(User.email == payload.email))
+        logger.info(f"Login attempt for email: {payload.email}")
+        # Optimize query: only fetch columns needed for login (reduces data transfer)
+        result = await asyncio.wait_for(
+            db.execute(
+                select(User)
+                .options(load_only(User.id, User.email, User.hashed_password, User.is_active, User.role))
+                .where(User.email == payload.email)
+            ),
+            timeout=5.0,  # 5 second timeout for the query
+        )
         user = result.scalar_one_or_none()
-        if not user or not verify_password(payload.password, user.hashed_password):
+        if not user:
+            # Use same error message for both cases to prevent user enumeration
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
             )
+        
+        # Verify password
+        if not verify_password(payload.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+            )
+        
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User inactive")
+        
         settings = get_settings()
         access_token = create_access_token(subject=user.id, role=user.role)
+        elapsed = time.time() - start_time
+        logger.info(f"Login successful for {payload.email} in {elapsed:.2f}s")
         return Token(
             access_token=access_token,
             token_type="bearer",
             expires_in=settings.access_token_expire_minutes * 60,
+        )
+    except asyncio.TimeoutError:
+        elapsed = time.time() - start_time
+        logger.error(f"Login query timed out after 5 seconds (total: {elapsed:.2f}s) for {payload.email}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection timeout. Please try again.",
         )
     except HTTPException:
         raise
