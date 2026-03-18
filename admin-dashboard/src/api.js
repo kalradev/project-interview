@@ -18,16 +18,29 @@ export function pingBackend() {
 }
 
 export async function login(email, password) {
-  const res = await fetch(`${BASE}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ email, password }),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || 'Login failed')
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+  
+  try {
+    const res = await fetch(`${BASE}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ email, password }),
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error(err.detail || 'Login failed')
+    }
+    return res.json()
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err.name === 'AbortError') {
+      throw new Error('Request timeout. Please try again.')
+    }
+    throw err
   }
-  return res.json()
 }
 
 /** Get current authenticated user (for admin profile). */
@@ -75,12 +88,25 @@ export async function signup(email, password, fullName = '') {
 }
 
 export async function listCandidates(token, params = {}) {
-  const q = new URLSearchParams(params).toString()
-  const res = await fetch(`${BASE}/api/v1/admin/candidates${q ? `?${q}` : ''}`, {
-    headers: headers(token),
-  })
-  if (!res.ok) throw new Error('Failed to fetch candidates')
-  return res.json()
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
+  
+  try {
+    const q = new URLSearchParams(params).toString()
+    const res = await fetch(`${BASE}/api/v1/admin/candidates${q ? `?${q}` : ''}`, {
+      headers: headers(token),
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    if (!res.ok) throw new Error('Failed to fetch candidates')
+    return res.json()
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err.name === 'AbortError') {
+      throw new Error('Request timeout. Please try again.')
+    }
+    throw err
+  }
 }
 
 export async function addCandidate(token, data) {

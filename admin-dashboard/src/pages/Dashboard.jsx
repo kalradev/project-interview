@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { Link } from 'react-router-dom'
 import { getToken, logout } from '../App'
 import { listCandidates, addCandidate, getReport, candidateAction, deleteCandidate, extractResumeDetails, extractResumeFromFile, apiBase } from '../api'
@@ -6,7 +6,7 @@ import Orb from '../components/Orb'
 import './Dashboard.css'
 
 const CANDIDATES_CACHE_KEY = 'dashboard_candidates_cache'
-const CANDIDATES_CACHE_TTL_MS = 2 * 60 * 1000 // 2 minutes
+const CANDIDATES_CACHE_TTL_MS = 5 * 60 * 1000 // Increased to 5 minutes for better caching
 
 function getCachedCandidates(statusFilter) {
   try {
@@ -72,7 +72,7 @@ export default function Dashboard() {
   const [formSuccess, setFormSuccess] = useState('')
   const [deletingId, setDeletingId] = useState(null)
 
-  const loadCandidates = async (background = false) => {
+  const loadCandidates = useCallback(async (background = false) => {
     const cached = getCachedCandidates(statusFilter)
     if (!background) {
       setLoading(!cached)
@@ -91,19 +91,21 @@ export default function Dashboard() {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [token, statusFilter])
 
   useEffect(() => {
     const cached = getCachedCandidates(statusFilter)
     if (cached && cached.length >= 0) {
+      // Show cached data immediately for instant display
       setCandidates(cached)
       setLoading(false)
+      // Then refresh in background
       loadCandidates(true)
     } else {
       setCandidates([])
       loadCandidates(false)
     }
-  }, [token, statusFilter])
+  }, [token, statusFilter, loadCandidates])
 
   function clearExtractedFormFields() {
     setFormEmail('')
@@ -252,7 +254,7 @@ export default function Dashboard() {
     }
   }
 
-  async function openReport(id) {
+  const openReport = useCallback(async (id) => {
     setReport(null)
     try {
       const data = await getReport(token, id)
@@ -260,9 +262,9 @@ export default function Dashboard() {
     } catch {
       setReport({ none: true })
     }
-  }
+  }, [token])
 
-  async function handleAction(candidateId, status) {
+  const handleAction = useCallback(async (candidateId, status) => {
     try {
       await candidateAction(token, candidateId, status)
       loadCandidates()
@@ -270,11 +272,11 @@ export default function Dashboard() {
     } catch (err) {
       setError(err.message || 'Action failed')
     }
-  }
+  }, [token, loadCandidates, report])
 
-  async function handleDelete(candidateId) {
-    const name = candidates.find((x) => x.id === candidateId)?.full_name ||
-      candidates.find((x) => x.id === candidateId)?.email?.split('@')[0] || 'this candidate'
+  const handleDelete = useCallback(async (candidateId) => {
+    const candidate = candidates.find((x) => x.id === candidateId)
+    const name = candidate?.full_name || candidate?.email?.split('@')[0] || 'this candidate'
     if (!window.confirm(`Remove ${name}? This will delete their profile, user account, and all interview data.`)) return
     setDeletingId(candidateId)
     setError('')
@@ -287,7 +289,7 @@ export default function Dashboard() {
     } finally {
       setDeletingId(null)
     }
-  }
+  }, [token, candidates, loadCandidates, report])
 
   return (
     <div className="dashboard">
@@ -691,22 +693,36 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {candidates.map((c) => (
-                  <tr key={c.id}>
-                    <td className="photo-cell">
-                      {c.photo_url ? (
-                        <img src={`${apiBase}${c.photo_url}`} alt="" className="candidate-thumb" />
-                      ) : (
-                        <span className="no-photo">—</span>
-                      )}
-                    </td>
-                    <td>{(c.full_name && c.full_name.trim().toLowerCase() !== 'candidate') ? c.full_name : (c.email && c.email.includes('@') ? c.email.split('@')[0] : '—')}</td>
-                    <td>{c.email}</td>
-                    <td>{c.job_role}</td>
-                    <td>{c.ats_score != null ? c.ats_score : '—'}</td>
-                    <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
-                    <td>{formatDate(c.invited_at)}</td>
-                    <td>{c.interview_scheduled_at ? formatDate(c.interview_scheduled_at) : '—'}</td>
+                {candidates.map((c) => {
+                  // Memoize expensive computations
+                  const displayName = (c.full_name && c.full_name.trim().toLowerCase() !== 'candidate') 
+                    ? c.full_name 
+                    : (c.email && c.email.includes('@') ? c.email.split('@')[0] : '—')
+                  const invitedDate = formatDate(c.invited_at)
+                  const interviewDate = c.interview_scheduled_at ? formatDate(c.interview_scheduled_at) : '—'
+                  
+                  return (
+                    <tr key={c.id}>
+                      <td className="photo-cell">
+                        {c.photo_url ? (
+                          <img 
+                            src={`${apiBase}${c.photo_url}`} 
+                            alt="" 
+                            className="candidate-thumb"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span className="no-photo">—</span>
+                        )}
+                      </td>
+                      <td>{displayName}</td>
+                      <td>{c.email}</td>
+                      <td>{c.job_role}</td>
+                      <td>{c.ats_score != null ? c.ats_score : '—'}</td>
+                      <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
+                      <td>{invitedDate}</td>
+                      <td>{interviewDate}</td>
                     <td className="actions-cell">
                       <div className="actions-buttons">
                         <Link to={`/dashboard/candidates/${c.id}`} className="btn-action btn-action-profile" title="View full profile">
@@ -746,7 +762,8 @@ export default function Dashboard() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

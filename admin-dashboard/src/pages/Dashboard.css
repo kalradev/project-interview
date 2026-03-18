@@ -649,6 +649,10 @@
   border-collapse: collapse;
   background: var(--color-bg-card);
   font-size: 0.9rem;
+  /* Performance optimizations */
+  transform: translateZ(0);
+  will-change: contents;
+  contain: layout style paint;
 }
 
 .candidates-table th,
@@ -671,6 +675,9 @@
 
 .candidates-table tbody tr {
   transition: background var(--transition), box-shadow 0.2s ease;
+  /* Performance: isolate rendering */
+  contain: layout style paint;
+  transform: translateZ(0);
 }
 
 .candidates-table tbody tr:hover {
@@ -1084,7 +1091,18 @@
 .report-video video { border-radius: var(--radius-md); background: #0f172a; }
 
 .photo-cell { width: 52px; }
-.candidate-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--color-border); }
+.candidate-thumb { 
+  width: 40px; 
+  height: 40px; 
+  object-fit: cover; 
+  border-radius: var(--radius-md); 
+  border: 1px solid var(--color-border);
+  /* Performance optimizations */
+  transform: translateZ(0);
+  will-change: contents;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
 .no-photo { color: var(--color-text-subtle); font-size: 0.85rem; }
 
 .report-agent-block { margin-top: 1rem; padding: 0.85rem 1rem; background: #f0f9ff; border-radius: var(--radius-md); border: 1px solid #bae6fd; }

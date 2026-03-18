@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getToken } from '../App'
 import { getCandidate, getReport, candidateAction, apiBase } from '../api'
@@ -44,18 +44,22 @@ export default function CandidateProfile() {
       setLoading(true)
       setError('')
       try {
-        const [c, r] = await Promise.all([
-          getCandidate(token, id),
-          getReport(token, id).catch(() => null),
-        ])
+        // Load candidate first (faster), then report in parallel
+        const candidateData = await getCandidate(token, id)
         if (!cancelled) {
-          setCandidate(c)
-          setReport(r)
+          setCandidate(candidateData)
+          setLoading(false) // Show candidate data immediately
+        }
+        // Load report in background
+        const reportData = await getReport(token, id).catch(() => null)
+        if (!cancelled) {
+          setReport(reportData)
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load candidate')
-      } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setError(err.message || 'Failed to load candidate')
+          setLoading(false)
+        }
       }
     }
     load()
@@ -129,7 +133,13 @@ export default function CandidateProfile() {
           <div className="candidate-details-grid">
             <div className="candidate-photo-block">
               {candidate.photo_url ? (
-                <img src={`${apiBase}${candidate.photo_url}`} alt="" className="candidate-profile-photo" />
+                <img 
+                  src={`${apiBase}${candidate.photo_url}`} 
+                  alt="" 
+                  className="candidate-profile-photo"
+                  loading="lazy"
+                  decoding="async"
+                />
               ) : (
                 <div className="candidate-profile-photo-placeholder">No photo</div>
               )}
